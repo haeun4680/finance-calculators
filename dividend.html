@@ -505,15 +505,21 @@
             const totalAsset = price * shares;
             const annualDividend = dps * shares;
 
-            // Tax Calculation (15.4% for KRW)
+            // Tax Calculation
+            // KRW: 15.4% (Local Tax)
+            // USD/Others: 15.0% (Standard Treaty Rate for KR Residents investing in US)
             let taxRate = 0;
+            let taxLabel = "";
+
             if (currency === 'KRW') {
                 taxRate = 0.154; // 15.4%
-                document.getElementById('taxRateDisplay').innerText = "15.4%";
+                taxLabel = "15.4% (배당소득세)";
             } else {
-                taxRate = 0.0; // Keep 0 for USD as it varies (15% usually but simplified here)
-                document.getElementById('taxRateDisplay').innerText = "0% (세전)";
+                taxRate = 0.15; // 15.0% for US/Foreign
+                taxLabel = "15.0% (현지 배당세)";
             }
+            document.getElementById('taxRateDisplay').innerText = taxLabel;
+
             const annualDividendPostTax = annualDividend * (1 - taxRate);
 
             let divCount = 1;
@@ -529,14 +535,10 @@
 
             document.getElementById('totalAssetValue').innerText = `${currencySymbol}${totalAsset.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
 
-            // Display Pre/Post Tax Logic
-            if (currency === 'KRW') {
-                document.getElementById('taxInfoRow').style.display = 'flex';
-                document.getElementById('preTaxTotal').innerText = `${currencySymbol}${annualDividend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-                document.getElementById('postTaxTotal').innerText = `${currencySymbol}${annualDividendPostTax.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-            } else {
-                document.getElementById('taxInfoRow').style.display = 'none';
-            }
+            // Display Pre/Post Tax Logic (Now for ALL currencies)
+            document.getElementById('taxInfoRow').style.display = 'flex';
+            document.getElementById('preTaxTotal').innerText = `${currencySymbol}${annualDividend.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
+            document.getElementById('postTaxTotal').innerText = `${currencySymbol}${annualDividendPostTax.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
 
             if (divCount > 1) {
                 const periodAmt = periodicDividend.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 });
@@ -548,9 +550,8 @@
                     <div style="font-size: 0.8em; color: #0044aa; margin-top: 2px;">${currencySymbol}${annualAmt} <span style="font-size: 0.8em; color: #666;">(연/세전)</span></div>
                 `;
 
-                if (currency === 'KRW') {
-                    html += `<div style="font-size: 0.9em; color: #e4293f; margin-top: 5px; font-weight: bold;">➡️ 세후 ${currencySymbol}${annualAmtTax}</div>`;
-                }
+                // Show Post-Tax arrow for everyone
+                html += `<div style="font-size: 0.9em; color: #e4293f; margin-top: 5px; font-weight: bold;">➡️ 세후 ${currencySymbol}${annualAmtTax}</div>`;
 
                 document.getElementById('displayMyDividend').innerHTML = html;
             } else {
@@ -558,9 +559,8 @@
                 const annualAmtTax = annualDividendPostTax.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 });
 
                 let html = `<div>${currencySymbol}${annualAmt}</div>`;
-                if (currency === 'KRW') {
-                    html += `<div style="font-size: 0.9em; color: #e4293f; margin-top: 5px; font-weight: bold;">➡️ 세후 ${currencySymbol}${annualAmtTax}</div>`;
-                }
+                html += `<div style="font-size: 0.9em; color: #e4293f; margin-top: 5px; font-weight: bold;">➡️ 세후 ${currencySymbol}${annualAmtTax}</div>`;
+
                 document.getElementById('displayMyDividend').innerHTML = html;
             }
 

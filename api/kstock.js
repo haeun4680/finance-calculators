@@ -1,4 +1,9 @@
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
+
+// Robust initialization for different environments (CommonJS/ESM/Versions)
+const yahooFinance = (typeof YahooFinance.search === 'function')
+    ? YahooFinance
+    : new YahooFinance();
 
 export default async function handler(request, response) {
     const { mode, q, symbol } = request.query;

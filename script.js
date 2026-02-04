@@ -16,9 +16,6 @@ function parseInputValue(id) {
 }
 
 /**
- * Salary Calculator Logic
- */
-/**
  * Salary Calculator Logic (2026 Update with Reverse Calc)
  */
 function initSalaryCalculator() {
@@ -77,13 +74,7 @@ function initSalaryCalculator() {
 
         // 1. National Pension (4.5%, Cap 6.37m base)
         const npBase = Math.min(monthlyGross, 6370000); // 2025 July Cap
-        const nationalPension = Math.floor(npBase * 0.045); // Using 4.5% (2024/2025 rate, 2026 might be 4.75 but let's stick to current known)
-        // User text said 4.75 in HTML description, effectively 4.5 is widely used calculator value until confirmed.
-        // Let's use 4.5% as standard, or 4.75% if explicit. HTML text says 4.75, code used 4.75 previously.
-        // Reverting to previous code's logic: 4.75%? No, previous code had 4.75%. I will keep 4.75% to match HTML text if user wants 2026 projection.
-        // Actually, standard is 4.5%. HTML said "increased to 4.75%". I will use 4.5% as it's the current law, 4.75 is proposal.
-        // Wait, previous code used 0.0475. I will stick to 0.045 for standard calculators unless user insists.
-        // Let's use 0.045 (4.5%) which is standard.
+        const nationalPension = Math.floor(npBase * 0.045);
 
         // 2. Health Insurance (3.545%)
         const healthInsurance = Math.floor(monthlyTaxable * 0.03545);
@@ -227,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSalaryCalculator();
     initRentCalculator();
     initLoanCalculator();
+    initStockTaxCalculator();
 });
 
 /**
@@ -255,9 +247,6 @@ function initLoanCalculator() {
         }
 
         const monthlyRate = rate / 12;
-
-        // Formula: M = P * [ r(1+r)^n ] / [ (1+r)^n – 1 ]
-        // P: Principal, r: Monthly Interest Rate, n: Months
 
         let monthlyPayment = 0;
         let totalPayment = 0;
@@ -299,19 +288,11 @@ function initRentCalculator() {
     radios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (e.target.value === 'toRent') {
-                // Jeonse -> Wolse (Lower Deposit, Higher Rent)
-                // "How much deposit to convert to rent?"
-                currentRentGroup.style.display = 'none'; // Usually purely Jeonse start, or existing Wolse
-                // Actually to support "Wolse -> More Wolse" is rare. Usually Jeonse -> Wolse.
-                // Or "Lower Deposit"
-                currentRentGroup.style.display = 'block'; // Let's allow starting with some rent
+                currentRentGroup.style.display = 'none';
+                currentRentGroup.style.display = 'block';
                 targetLabel.textContent = "줄이고 싶은 보증금 액수 (만원)";
                 targetHelp.textContent = "현재 보증금에서 이 금액만큼을 빼고 월세로 전환합니다.";
             } else {
-                // Wolse -> Jeonse (Higher Deposit, Lower Rent)
-                // "How much rent to save?" -> Amount of Rent (Won) to convert to Deposit?
-                // Or "Increase Deposit by?"
-                // Let's go with "Reduce Rent by amount"
                 currentRentGroup.style.display = 'block';
                 targetLabel.textContent = "줄이고 싶은 월세 액수 (만원)";
                 targetHelp.textContent = "현재 월세에서 이 금액만큼을 줄이기 위해 필요한 보증금을 계산합니다.";
@@ -344,18 +325,12 @@ function initRentCalculator() {
         let finalRent = 0;
 
         if (type === 'toRent') {
-            // REDUCING Deposit -> INCREASING Rent
-            // value to reduce from deposit
             const reduceDeposit = targetAmount;
-
             if (reduceDeposit > currentDeposit) {
                 alert("줄이려는 보증금이 현재 보증금보다 클 수 없습니다.");
                 return;
             }
-
-            // Formula: Monthly Rent = Deposit * Rate / 12
             additionalRent = Math.floor((reduceDeposit * rate) / 12);
-
             finalDeposit = currentDeposit - reduceDeposit;
             finalRent = currentRent + additionalRent;
 
@@ -363,20 +338,13 @@ function initRentCalculator() {
             resultValue.textContent = formatMoney(additionalRent);
             finalDepositResult.textContent = formatMoney(finalDeposit);
             finalRentValue.textContent = formatMoney(finalRent);
-
         } else {
-            // REDUCING Rent -> INCREASING Deposit
-            // value to reduce from rent
-            const reduceRent = targetAmount; // In Won (input was Manwon * 10000)
-
+            const reduceRent = targetAmount;
             if (reduceRent > currentRent) {
                 alert("줄이려는 월세가 현재 월세보다 클 수 없습니다.");
                 return;
             }
-
-            // Formula: Deposit = (Monthly Rent * 12) / Rate
             additionalDeposit = Math.floor((reduceRent * 12) / rate);
-
             finalDeposit = currentDeposit + additionalDeposit;
             finalRent = currentRent - reduceRent;
 
@@ -391,34 +359,15 @@ function initRentCalculator() {
 }
 
 /**
- * Stock Tax Calculator Logic
+ * Stock Tax Calculator Logic (Overseas Only)
  */
 function initStockTaxCalculator() {
     const calcBtn = document.getElementById('calcTaxBtn');
     if (!calcBtn) return;
 
-    let currentType = 'overseas'; // overseas | domestic
-    const typeOptions = document.querySelectorAll('#stockTypeToggle .toggle-option');
+    // Force default deduction for Overseas (Fixed Mode)
     const basicDeductionInput = document.getElementById('basicDeduction');
-    const deductionGroup = document.getElementById('deductionGroup');
-
-    // Toggle Logic
-    typeOptions.forEach(opt => {
-        opt.addEventListener('click', () => {
-            typeOptions.forEach(o => o.classList.remove('active'));
-            opt.classList.add('active');
-            currentType = opt.dataset.value;
-
-            // UI changes based on type
-            if (currentType === 'overseas') {
-                deductionGroup.style.opacity = '1';
-                basicDeductionInput.value = 250;
-            } else {
-                deductionGroup.style.opacity = '0.5';
-                basicDeductionInput.value = 0; // Domestic usually 0 for calculation purposes in this context
-            }
-        });
-    });
+    if (basicDeductionInput) basicDeductionInput.value = 250;
 
     calcBtn.addEventListener('click', () => {
         const profitWan = parseInputValue('totalProfit'); // Manwon
@@ -430,52 +379,28 @@ function initStockTaxCalculator() {
             return;
         }
 
+        // Always Overseas Logic
+        const taxableIncome = Math.max(0, profit - deduction);
         let tax = 0;
-        let taxableIncome = 0;
         let rateStr = "0%";
         let message = "";
 
-        if (currentType === 'overseas') {
-            // Overseas Logic
-            taxableIncome = Math.max(0, profit - deduction);
-            if (taxableIncome > 0) {
-                tax = Math.floor(taxableIncome * 0.22); // 22% rate
-                rateStr = "22% (양도세+지방세)";
-                message = `
-                    <strong>이만큼 나라에 기여하시네요! 🇰🇷</strong><br>
-                    하지만 걱정 마세요. 세금을 낸다는 건 그만큼 <strong>수익을 많이 내셨다</strong>는 뜻이니까요!<br>
-                    세금을 제하고도 <strong>${formatMoney(profit - tax)}</strong>은 온전히 투자자님의 몫입니다. 💰
-                `;
-            } else {
-                tax = 0;
-                rateStr = "0% (비과세 구간)";
-                message = `
-                    <strong>🎉 축하합니다! 세금이 0원입니다!</strong><br>
-                    기본 공제(250만원) 구간 이내이거나 손실 상계 처리되어 납부할 세금이 없습니다.<br>
-                    이 수익은 <strong>100% 투자자님의 것</strong>입니다. 맛있는 거 사드세요! 🍗
-                `;
-            }
+        if (taxableIncome > 0) {
+            tax = Math.floor(taxableIncome * 0.22); // 22% rate
+            rateStr = "22% (양도세+지방세)";
+            message = `
+                <strong>이만큼 나라에 기여하시네요! 🇰🇷</strong><br>
+                하지만 걱정 마세요. 세금을 낸다는 건 그만큼 <strong>수익을 많이 내셨다</strong>는 뜻이니까요!<br>
+                세금을 제하고도 <strong>${formatMoney(profit - tax)}</strong>은 온전히 투자자님의 몫입니다. 💰
+            `;
         } else {
-            // Domestic Logic (General Investor Assumption)
-            // Assuming General Investor -> 0 Tax (Financial Investment Income Tax abolition scenario)
             tax = 0;
-            taxableIncome = 0;
-            rateStr = "0% (소액주주 비과세)";
-
-            if (profit > 0) {
-                message = `
-                    <strong>국내 주식의 매력! 세금이 없습니다. 🎉</strong><br>
-                    (대주주 요건에 해당하지 않는다면)<br>
-                    양도소득세 걱정 없이 수익을 온전히 즐기세요! <br>
-                    <span style="font-size:0.8rem; color:#888;">* 증권거래세는 매도 시 이미 차감되었습니다.</span>
-                `;
-            } else {
-                message = `
-                    <strong>힘내세요! 😢</strong><br>
-                    손실이 나셨군요... 국내 주식은 손실 이월 공제가 되지 않지만(현행법 기준),<br>
-                    다음엔 꼭 대박 나시길 응원하겠습니다! 📈
-                `;
-            }
+            rateStr = "0% (비과세 구간)";
+            message = `
+                <strong>🎉 축하합니다! 세금이 0원입니다!</strong><br>
+                기본 공제(250만원) 구간 이내이거나 손실 상계 처리되어 납부할 세금이 없습니다.<br>
+                이 수익은 <strong>100% 투자자님의 것</strong>입니다. 맛있는 거 사드세요! 🍗
+            `;
         }
 
         const netProfit = profit - tax;

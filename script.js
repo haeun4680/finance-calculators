@@ -389,3 +389,109 @@ function initRentCalculator() {
         resultArea.classList.add('show');
     });
 }
+
+/**
+ * Stock Tax Calculator Logic
+ */
+function initStockTaxCalculator() {
+    const calcBtn = document.getElementById('calcTaxBtn');
+    if (!calcBtn) return;
+
+    let currentType = 'overseas'; // overseas | domestic
+    const typeOptions = document.querySelectorAll('#stockTypeToggle .toggle-option');
+    const basicDeductionInput = document.getElementById('basicDeduction');
+    const deductionGroup = document.getElementById('deductionGroup');
+
+    // Toggle Logic
+    typeOptions.forEach(opt => {
+        opt.addEventListener('click', () => {
+            typeOptions.forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            currentType = opt.dataset.value;
+
+            // UI changes based on type
+            if (currentType === 'overseas') {
+                deductionGroup.style.opacity = '1';
+                basicDeductionInput.value = 250;
+            } else {
+                deductionGroup.style.opacity = '0.5';
+                basicDeductionInput.value = 0; // Domestic usually 0 for calculation purposes in this context
+            }
+        });
+    });
+
+    calcBtn.addEventListener('click', () => {
+        const profitWan = parseInputValue('totalProfit'); // Manwon
+        const profit = profitWan * 10000;
+        const deduction = parseInputValue('basicDeduction') * 10000;
+
+        if (profitWan === 0 && document.getElementById('totalProfit').value === "") {
+            alert("매매 차익을 입력해주세요.");
+            return;
+        }
+
+        let tax = 0;
+        let taxableIncome = 0;
+        let rateStr = "0%";
+        let message = "";
+
+        if (currentType === 'overseas') {
+            // Overseas Logic
+            taxableIncome = Math.max(0, profit - deduction);
+            if (taxableIncome > 0) {
+                tax = Math.floor(taxableIncome * 0.22); // 22% rate
+                rateStr = "22% (양도세+지방세)";
+                message = `
+                    <strong>이만큼 나라에 기여하시네요! 🇰🇷</strong><br>
+                    하지만 걱정 마세요. 세금을 낸다는 건 그만큼 <strong>수익을 많이 내셨다</strong>는 뜻이니까요!<br>
+                    세금을 제하고도 <strong>${formatMoney(profit - tax)}</strong>은 온전히 투자자님의 몫입니다. 💰
+                `;
+            } else {
+                tax = 0;
+                rateStr = "0% (비과세 구간)";
+                message = `
+                    <strong>🎉 축하합니다! 세금이 0원입니다!</strong><br>
+                    기본 공제(250만원) 구간 이내이거나 손실 상계 처리되어 납부할 세금이 없습니다.<br>
+                    이 수익은 <strong>100% 투자자님의 것</strong>입니다. 맛있는 거 사드세요! 🍗
+                `;
+            }
+        } else {
+            // Domestic Logic (General Investor Assumption)
+            // Assuming General Investor -> 0 Tax (Financial Investment Income Tax abolition scenario)
+            tax = 0;
+            taxableIncome = 0;
+            rateStr = "0% (소액주주 비과세)";
+
+            if (profit > 0) {
+                message = `
+                    <strong>국내 주식의 매력! 세금이 없습니다. 🎉</strong><br>
+                    (대주주 요건에 해당하지 않는다면)<br>
+                    양도소득세 걱정 없이 수익을 온전히 즐기세요! <br>
+                    <span style="font-size:0.8rem; color:#888;">* 증권거래세는 매도 시 이미 차감되었습니다.</span>
+                `;
+            } else {
+                message = `
+                    <strong>힘내세요! 😢</strong><br>
+                    손실이 나셨군요... 국내 주식은 손실 이월 공제가 되지 않지만(현행법 기준),<br>
+                    다음엔 꼭 대박 나시길 응원하겠습니다! 📈
+                `;
+            }
+        }
+
+        const netProfit = profit - tax;
+
+        // UI Update
+        document.getElementById('finalTax').textContent = formatMoney(tax);
+        document.getElementById('grossProfit').textContent = formatMoney(profit);
+        document.getElementById('netProfit').textContent = formatMoney(netProfit);
+        document.getElementById('taxableIncome').textContent = formatMoney(taxableIncome);
+        document.getElementById('appliedRate').textContent = rateStr;
+
+        const msgBox = document.getElementById('funMessage');
+        msgBox.innerHTML = message;
+        msgBox.style.display = 'block';
+
+        document.getElementById('resultArea').classList.add('show');
+        document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+    });
+}

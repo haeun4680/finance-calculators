@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주식 양도소득세 계산기 - 해외주식/국내주식 세금 계산</title>
+    <meta name="description" content="해외주식 250만원 공제 적용 시 세금은? 국내주식 대주주 요건은? 주식 매도 차익에 대한 양도소득세를 쉽고 재미있게 계산해보세요.">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .toggle-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .toggle-group {
+            background: #f1f3f5;
+            padding: 4px;
+            border-radius: 8px;
+            display: inline-flex;
+        }
+
+        .toggle-option {
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #666;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .toggle-option.active {
+            background: #fff;
+            color: #0066ff;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .fun-message {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            color: #795548;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>주식 양도소득세 계산기</h1>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← 메인으로 돌아가기</a>
+
+        <!-- 광고 영역 -->
+        <div class="ad-placeholder">
+            <!-- adsense-top -->
+            광고 영역
+        </div>
+
+        <section class="description-box">
+            <h2>주식 팔고 세금, 얼마나 나올까?</h2>
+            <p>해외주식은 연간 250만원 기본 공제가 있다는 사실, 알고 계셨나요?<br>
+                매도 차익을 입력하면 내야 할 세금과 최종 수익을 알려드립니다.</p>
+        </section>
+
+        <section class="calculator-section">
+            <div class="toggle-container">
+                <div class="toggle-group" id="stockTypeToggle">
+                    <div class="toggle-option" data-value="domestic">국내 주식</div>
+                    <div class="toggle-option active" data-value="overseas">해외 주식 (미국 등)</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="totalProfit">총 매매 차익 (수익금 - 손실금) (만원)</label>
+                <input type="number" id="totalProfit" placeholder="예: 300" inputmode="numeric">
+                <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">
+                    * 1월 1일 ~ 12월 31일 실현 손익 합계
+                </p>
+            </div>
+
+            <div class="form-group" id="deductionGroup">
+                <label for="basicDeduction">기본 공제 (만원)</label>
+                <input type="number" id="basicDeduction" value="250" readonly style="background-color: #eee;">
+                <p style="font-size: 0.8rem; color: #0066ff; margin-top: 5px;">
+                    * 해외주식은 인당 연 250만원 자동 공제됩니다.
+                </p>
+            </div>
+
+            <button id="calcTaxBtn" class="btn-primary">세금 계산하기</button>
+        </section>
+
+        <!-- 광고 영역 -->
+        <div class="ad-placeholder">
+            <!-- adsense-middle -->
+            광고 영역
+        </div>
+
+        <section id="resultArea" class="result-box">
+            <h3 style="text-align: center; margin-bottom: 20px; color: #333;">계산 결과</h3>
+
+            <div class="result-item highlight">
+                <span class="label">예상 양도소득세</span>
+                <span class="value" id="finalTax">0원</span>
+            </div>
+
+            <div class="result-item">
+                <span class="label">총 수익 (세전)</span>
+                <span class="value" id="grossProfit">0원</span>
+            </div>
+            <div class="result-item" style="color: #0066ff; font-weight: bold;">
+                <span class="label">최종 순수익 (세후)</span>
+                <span class="value" id="netProfit">0원</span>
+            </div>
+
+            <div id="funMessage" class="fun-message" style="display: none;">
+                <!-- 메시지 자동 삽입 -->
+            </div>
+
+            <div
+                style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: flex; justify-content: space-between; font-size: 0.9rem; color: #666;">
+                <span>과세 표준 (공제 후)</span>
+                <span id="taxableIncome">0원</span>
+            </div>
+            <div
+                style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #666; margin-top: 5px;">
+                <span>적용 세율</span>
+                <span id="appliedRate">22%</span>
+            </div>
+        </section>
+
+        <!-- 쿠팡 파트너스 추천 -->
+        <div class="coupang-recommend">
+            <h3>💰 세금 아끼는 필독서</h3>
+            <a href="https://link.coupang.com/a/dFJmqB" target="_blank" class="btn-coupang">
+                📚 절세 가이드북 보기
+            </a>
+            <p style="font-size: 0.75rem; color: #aaa; margin-top: 15px;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를
+                제공받습니다.</p>
+        </div>
+
+        <section class="content-box">
+            <h3>💡 주식 세금 상식</h3>
+            <ul>
+                <li><strong>해외 주식:</strong> 연간(1.1~12.31) 매매차익에서 250만원을 뺀 금액에 대해 22%(양도세 20% + 지방세 2%)가 부과됩니다.</li>
+                <li><strong>국내 주식:</strong> 소액주주(지분율/보유액 기준 미만)는 장내 거래 시 양도소득세가 없습니다. (증권거래세만 부과되며, 이는 매도 시 자동 차감됩니다.)
+                </li>
+                <li><strong>신고 기간:</strong> 매도한 해의 다음 해 5월에 확정신고 및 납부해야 합니다.</li>
+            </ul>
+        </section>
+
+        <!-- 광고 영역 -->
+        <div class="ad-placeholder">
+            <!-- adsense-bottom -->
+            광고 영역
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 생활 재무 계산기 모음</p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Init specifically for this page (inline for simplicity or move to script.js)
+        document.addEventListener('DOMContentLoaded', () => {
+            // We will implement initStockTaxCalculator in script.js and call it main init
+            if (typeof initStockTaxCalculator === 'function') initStockTaxCalculator();
+        });
+    </script>
+</body>
+
+</html>

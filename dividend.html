@@ -353,9 +353,29 @@
                     dps = price * (yieldPercent / 100);
                 }
 
+                // 4. [NEW] API 데이터가 아예 없는 인기 ETF를 위한 하드코딩 백업
+                const BACKUP_ETF_DATA = {
+                    "SCHD": { yield: 3.5, freq: "분기배당" },
+                    "JEPI": { yield: 7.5, freq: "월배당" },
+                    "JEPQ": { yield: 9.2, freq: "월배당" },
+                    "SPY": { yield: 1.3, freq: "분기배당" },
+                    "QQQ": { yield: 0.6, freq: "분기배당" },
+                    "VNQ": { yield: 3.8, freq: "분기배당" },
+                    "TLT": { yield: 3.6, freq: "월배당" }
+                };
+
+                if (dps === 0 && BACKUP_ETF_DATA[ticker]) {
+                    yieldPercent = BACKUP_ETF_DATA[ticker].yield;
+                    frequency = BACKUP_ETF_DATA[ticker].freq;
+                    dps = price * (yieldPercent / 100);
+                    console.log(`Using backup data for ${ticker}`);
+                }
+
                 // ETF인데 이름이 없으면 티커로
-                if (industry.includes("Fund") || industry.includes("ETF")) {
-                    // ETF 특화 로직 (필요 시 추가)
+                if (industry.includes("Fund") || industry.includes("ETF") || BACKUP_ETF_DATA[ticker]) {
+                    if (ticker === 'SCHD') name = "Schwab US Dividend Equity ETF";
+                    if (ticker === 'JEPI') name = "JPMorgan Equity Premium Income ETF";
+                    if (ticker === 'JEPQ') name = "JPMorgan Nasdaq Equity Premium Income ETF";
                 }
 
                 // 주기 추론

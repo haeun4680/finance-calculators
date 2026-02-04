@@ -7,6 +7,43 @@
     <title>2026 연봉 실수령액 계산기 - 내 월급 실수령액은 얼마?</title>
     <meta name="description" content="연봉 1억 실수령액은? 4대보험과 소득세를 공제한 실제 월 급여를 확인하세요. 연봉계산기 최신판.">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Salary Calculator Specific Styles */
+        .toggle-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .toggle-group {
+            background: #f1f3f5;
+            padding: 4px;
+            border-radius: 8px;
+            display: inline-flex;
+        }
+
+        .toggle-option {
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #666;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .toggle-option.active {
+            background: #fff;
+            color: #0066ff;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-label-dynamic {
+            transition: all 0.3s;
+        }
+    </style>
 </head>
 
 <body>
@@ -24,14 +61,31 @@
         </div>
 
         <section class="description-box">
-            <h2>연봉에서 세금 떼고 얼마 받을까?</h2>
-            <p>연봉에서 4대보험(국민연금, 건강보험, 요양보험, 고용보험)과 소득세(간이세액표 기준)를 제외한 실제 월 수령액을 계산해드립니다.</p>
+            <h2>내 월급, 세금 떼면 얼마?</h2>
+            <p>연봉이나 월급을 입력하여 실수령액을 계산하거나,<br>
+                <strong>희망하는 실수령액</strong>을 입력하여 필요한 연봉을 역으로 계산할 수 있습니다.
+            </p>
         </section>
 
         <section class="calculator-section">
+            <!-- Toggles -->
+            <div class="toggle-container">
+                <div class="toggle-group" id="periodToggle">
+                    <div class="toggle-option active" data-value="annual">연봉</div>
+                    <div class="toggle-option" data-value="monthly">월급</div>
+                </div>
+                <div class="toggle-group" id="taxToggle">
+                    <div class="toggle-option active" data-value="pre">세전</div>
+                    <div class="toggle-option" data-value="post">세후(실수령)</div>
+                </div>
+            </div>
+
             <div class="form-group">
-                <label for="salary">연봉 (만원)</label>
-                <input type="number" id="salary" placeholder="예: 4000" inputmode="numeric">
+                <label for="salaryInput" id="salaryLabel" class="input-label-dynamic">연봉 (세전 기준)</label>
+                <input type="number" id="salaryInput" placeholder="예: 4000" inputmode="numeric">
+                <p id="salaryHelp" style="font-size: 0.8rem; color: #888; margin-top: 5px; display: none;">
+                    * 매달 통장에 찍히는 금액을 입력하세요.
+                </p>
             </div>
 
             <div class="form-group">
@@ -59,16 +113,25 @@
         </div>
 
         <section id="resultArea" class="result-box">
+            <h3 style="text-align: center; margin-bottom: 20px; color: #333;" id="resultTitle">계산 결과</h3>
+
             <div class="result-item highlight">
-                <span class="label">예상 월 실수령액</span>
+                <span class="label">월 실수령액 (예상)</span>
                 <span class="value" id="monthlyNetPay">0원</span>
             </div>
-            <div class="result-item">
-                <span class="label">월 급여액 (세전)</span>
-                <span class="value" id="monthlyGrossPay">0원</span>
+            <div class="result-item" style="background-color: #f0f7ff;">
+                <span class="label">연봉 (세전)</span>
+                <span class="value" id="annualGrossPay">0원</span>
             </div>
             <div class="result-item">
-                <span class="label">총 공제액</span>
+                <span class="label">월 급여 (세전)</span>
+                <span class="value" id="monthlyGrossPay">0원</span>
+            </div>
+
+            <div style="margin: 20px 0; border-top: 1px dashed #ddd;"></div>
+
+            <div class="result-item">
+                <span class="label">총 공제액 (월)</span>
                 <span class="value" id="totalDeduction">0원</span>
             </div>
             <div class="result-item">
@@ -98,7 +161,7 @@
 
             <p class="disclaimer">
                 ※ 이 계산 결과는 모의 계산 결과로 실제 급여 명세서와 차이가 있을 수 있습니다. <br>
-                ※ 국민연금 상한액(월 590만원 소득 기준) 등 일부 조건이 단순화되어 적용되었습니다.
+                ※ 역산(세후→세전) 계산 시 100원 단위 오차가 발생할 수 있습니다.
             </p>
         </section>
 
@@ -117,12 +180,6 @@
             <h2>2026년 연봉 실수령액, 왜 달라졌을까?</h2>
             <p>2026년에는 국민연금과 건강보험 요율이 인상되면서, 동일한 연봉이라도 실제 수령액이 소폭 감소할 수 있습니다. 특히 국민연금 요율은 4.5%에서 4.75%(근로자 부담분 기준)로
                 인상되었으며, 상한액 기준도 변경되었습니다.</p>
-
-            <h3>💡 자주 묻는 질문 (FAQ)</h3>
-            <ul>
-                <li><strong>비과세액이란 무엇인가요?</strong><br>식대(월 20만원 한도), 자가운전보조금, 출산보육수당 등 세금을 부과하지 않는 급여 항목입니다.</li>
-                <li><strong>부양가족 공제 기준은?</strong><br>연간 소득금액 100만원 이하인 배우자와 직계존비속이 대상이며, 1인당 연 150만원을 공제받습니다.</li>
-            </ul>
         </section>
 
         <!-- 광고 영역 -->

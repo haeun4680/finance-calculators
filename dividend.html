@@ -263,6 +263,17 @@
                 return;
             }
 
+            // [NEW] 한국어 검색어(또는 6자리 종목코드)가 감지되면 API 호출 없이 바로 네이버 검색 유도
+            const isKoreanInput = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(query) || /^[0-9]{6}$/.test(query);
+            if (isKoreanInput) {
+                const confirmNaver = confirm(`'${query}' 검색: 한국 주식은 무료 API 지원 대상이 아닙니다.\n대신 네이버 증권 검색 페이지를 열어드릴까요?\n(확인 후 수동 입력 모드로 전환됩니다)`);
+                if (confirmNaver) {
+                    window.open(`https://finance.naver.com/search/search.naver?query=${encodeURIComponent(query)}`, '_blank');
+                    toggleManualMode();
+                }
+                return;
+            }
+
             const searchBtn = document.getElementById('searchBtn');
             const originalBtnText = searchBtn.innerText;
             searchBtn.innerText = "검색중...";

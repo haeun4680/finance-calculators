@@ -326,14 +326,29 @@
                 // ETF의 경우 metric 필드가 조금 다를 수 있음
                 const metrics = metricData.metric || {};
 
-                // Yield 우선순위: Indicated > TTM > 5Y
-                const yieldPercent = metrics.dividendYieldIndicatedAnnual ||
+                // 1. Metric에서 우선 조회
+                let yieldPercent = metrics.dividendYieldIndicatedAnnual ||
                     metrics.currentDividendYieldTTM ||
                     metrics.dividendYield5Y || 0;
 
                 let dps = metrics.dividendPerShareAnnual || metrics.dividendPerShareTTM || 0;
 
-                // DPS가 0이고 Yield가 있으면 역산
+                // 2. Metric 데이터가 없으면 배당 내역(History)에서 직접 계산 (Fallback)
+                if (dps === 0 && Array.isArray(dividendData) && dividendData.length > 0) {
+                    const oneYearAgo = new Date();
+                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+                    // 최근 1년치 배당금 합산 (TTM)
+                    const ttmDividends = dividendData.filter(d => new Date(d.date) > oneYearAgo);
+                    dps = ttmDividends.reduce((sum, item) => sum + item.amount, 0);
+
+                    // DPS가 구해졌으면 Yield 역산
+                    if (dps > 0 && price > 0) {
+                        yieldPercent = (dps / price) * 100;
+                    }
+                }
+
+                // 3. DPS가 없는데 Yield만 있는 경우 (역산)
                 if (dps === 0 && yieldPercent > 0) {
                     dps = price * (yieldPercent / 100);
                 }

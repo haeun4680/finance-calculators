@@ -299,216 +299,225 @@
             searchBtn.disabled = true;
 
             try {
-                // 1. 현재가 (Quote)
-                const quotePromise = fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json());
+                try {
+                    // 1. 현재가 (Quote) - 실패하면 null 반환
+                    const quotePromise = fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`)
+                        .then(r => r.json())
+                        .catch(e => null);
 
-                // 2. 회사 정보 (Profile2) - 이름 가져오기
-                const profilePromise = fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json());
+                    // 2. 회사 정보 (Profile2) - 실패하면 null
+                    const profilePromise = fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_API_KEY}`)
+                        .then(r => r.json())
+                        .catch(e => null);
 
-                // 3. 재무 지표 (Metrics) - 배당률, DPS
-                const metricPromise = fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_API_KEY}`).then(r => r.json());
+                    // 3. 재무 지표 (Metrics) - 실패하면 null
+                    const metricPromise = fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_API_KEY}`)
+                        .then(r => r.json())
+                        .catch(e => null);
 
-                // 4. 배당 내역 (Dividends) - 주기 추론용 (최근 1년치 확인)
-                // Note: Finnhub 무료 플랜에서 dividend endpoint가 제한적일 수 있으나 시도
-                const dividendPromise = fetch(`https://finnhub.io/api/v1/stock/dividend?symbol=${ticker}&from=2024-01-01&to=2026-12-31&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => []);
+                    // 4. 배당 내역 (Dividends) - 실패하면 빈 배열
+                    const dividendPromise = fetch(`https://finnhub.io/api/v1/stock/dividend?symbol=${ticker}&from=2024-01-01&to=2026-12-31&token=${FINNHUB_API_KEY}`)
+                        .then(r => r.json())
+                        .catch(e => []);
 
-                const [quoteData, profileData, metricData, dividendData] = await Promise.all([quotePromise, profilePromise, metricPromise, dividendPromise]);
+                    const [quoteData, profileData, metricData, dividendData] = await Promise.all([quotePromise, profilePromise, metricPromise, dividendPromise]);
 
-                if (!quoteData.c) {
-                    throw new Error('주가 정보를 가져올 수 없습니다.');
-                }
-
-                // 데이터 파싱
-                const price = quoteData.c;
-                const name = profileData.name || ticker;
-                const industry = profileData.finnhubIndustry || "";
-
-                // ETF의 경우 metric 필드가 조금 다를 수 있음
-                const metrics = metricData.metric || {};
-
-                // 1. Metric에서 우선 조회
-                let yieldPercent = metrics.dividendYieldIndicatedAnnual ||
-                    metrics.currentDividendYieldTTM ||
-                    metrics.dividendYield5Y || 0;
-
-                let dps = metrics.dividendPerShareAnnual || metrics.dividendPerShareTTM || 0;
-
-                // 2. Metric 데이터가 없으면 배당 내역(History)에서 직접 계산 (Fallback)
-                if (dps === 0 && Array.isArray(dividendData) && dividendData.length > 0) {
-                    const oneYearAgo = new Date();
-                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-                    // 최근 1년치 배당금 합산 (TTM)
-                    const ttmDividends = dividendData.filter(d => new Date(d.date) > oneYearAgo);
-                    dps = ttmDividends.reduce((sum, item) => sum + item.amount, 0);
-
-                    // DPS가 구해졌으면 Yield 역산
-                    if (dps > 0 && price > 0) {
-                        yieldPercent = (dps / price) * 100;
+                    // Quote(현재가)는 필수. 없으면 에러.
+                    if (!quoteData || !quoteData.c) {
+                        throw new Error('주가 정보를 가져올 수 없습니다.');
                     }
+
+                    // 데이터 파싱
+                    const price = quoteData.c;
+                    const name = profileData.name || ticker;
+                    const industry = profileData.finnhubIndustry || "";
+
+                    // ETF의 경우 metric 필드가 조금 다를 수 있음
+                    const metrics = metricData.metric || {};
+
+                    // 1. Metric에서 우선 조회
+                    let yieldPercent = metrics.dividendYieldIndicatedAnnual ||
+                        metrics.currentDividendYieldTTM ||
+                        metrics.dividendYield5Y || 0;
+
+                    let dps = metrics.dividendPerShareAnnual || metrics.dividendPerShareTTM || 0;
+
+                    // 2. Metric 데이터가 없으면 배당 내역(History)에서 직접 계산 (Fallback)
+                    if (dps === 0 && Array.isArray(dividendData) && dividendData.length > 0) {
+                        const oneYearAgo = new Date();
+                        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+                        // 최근 1년치 배당금 합산 (TTM)
+                        const ttmDividends = dividendData.filter(d => new Date(d.date) > oneYearAgo);
+                        dps = ttmDividends.reduce((sum, item) => sum + item.amount, 0);
+
+                        // DPS가 구해졌으면 Yield 역산
+                        if (dps > 0 && price > 0) {
+                            yieldPercent = (dps / price) * 100;
+                        }
+                    }
+
+                    // 3. DPS가 없는데 Yield만 있는 경우 (역산)
+                    if (dps === 0 && yieldPercent > 0) {
+                        dps = price * (yieldPercent / 100);
+                    }
+
+                    // 4. [NEW] API 데이터가 아예 없는 인기 ETF를 위한 하드코딩 백업
+                    const BACKUP_ETF_DATA = {
+                        "SCHD": { yield: 3.5, freq: "분기배당" },
+                        "JEPI": { yield: 7.5, freq: "월배당" },
+                        "JEPQ": { yield: 9.2, freq: "월배당" },
+                        "SPY": { yield: 1.3, freq: "분기배당" },
+                        "QQQ": { yield: 0.6, freq: "분기배당" },
+                        "VNQ": { yield: 3.8, freq: "분기배당" },
+                        "TLT": { yield: 3.6, freq: "월배당" }
+                    };
+
+                    if (dps === 0 && BACKUP_ETF_DATA[ticker]) {
+                        yieldPercent = BACKUP_ETF_DATA[ticker].yield;
+                        frequency = BACKUP_ETF_DATA[ticker].freq;
+                        dps = price * (yieldPercent / 100);
+                        console.log(`Using backup data for ${ticker}`);
+                    }
+
+                    // ETF인데 이름이 없으면 티커로
+                    if (industry.includes("Fund") || industry.includes("ETF") || BACKUP_ETF_DATA[ticker]) {
+                        if (ticker === 'SCHD') name = "Schwab US Dividend Equity ETF";
+                        if (ticker === 'JEPI') name = "JPMorgan Equity Premium Income ETF";
+                        if (ticker === 'JEPQ') name = "JPMorgan Nasdaq Equity Premium Income ETF";
+                    }
+
+                    // 주기 추론
+                    let frequency = "연배당"; // 기본
+                    if (Array.isArray(dividendData) && dividendData.length >= 2) {
+                        // 최근 배당들을 날짜순 정렬 (Finnhub은 보통 내림차순)
+                        // 1년간 배당 횟수 체크
+                        // 간단히: 지난 12개월(365일) 간 데이터 개수
+                        const oneYearAgo = new Date();
+                        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+                        const recentDivs = dividendData.filter(d => new Date(d.date) > oneYearAgo);
+                        const count = recentDivs.length;
+
+                        if (count >= 11) frequency = "월배당";
+                        else if (count >= 3) frequency = "분기배당";
+                        else if (count >= 1) frequency = "반기/연배당";
+                    } else {
+                        // 데이터 없으면 Yield가 있으면 '알수없음' 혹은 그냥 분기(미국주식 다수)로 추정하진 말고 '-'
+                        // 보통 미국 배당주는 분기가 많음.
+                        if (yieldPercent > 0) frequency = "분기배당(추정)";
+                        else frequency = "-";
+                    }
+
+                    // O (Realty Income) 등 알려진 월배당 예외처리 (재미 요소)
+                    if (ticker === 'O' || ticker === 'JEPI') frequency = "월배당";
+
+                    currentStockData = {
+                        price: price,
+                        yield: yieldPercent,
+                        dps: dps,
+                        name: name,
+                        frequency: frequency
+                    };
+
+                    // UI 업데이트
+                    document.getElementById('displayTicker').innerText = ticker;
+                    document.getElementById('displayFullName').innerText = name;
+                    document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
+                    document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
+                    document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;
+                    document.getElementById('displayFrequency').innerText = frequency;
+
+                    document.getElementById('stockInfoCard').style.display = 'block';
+
+                    calculateDividend();
+
+                } catch (error) {
+                    console.error(error);
+                    alert('데이터 조회 실패. 티커를 확인해주세요.');
+                } finally {
+                    searchBtn.innerText = originalBtnText;
+                    searchBtn.disabled = false;
                 }
-
-                // 3. DPS가 없는데 Yield만 있는 경우 (역산)
-                if (dps === 0 && yieldPercent > 0) {
-                    dps = price * (yieldPercent / 100);
-                }
-
-                // 4. [NEW] API 데이터가 아예 없는 인기 ETF를 위한 하드코딩 백업
-                const BACKUP_ETF_DATA = {
-                    "SCHD": { yield: 3.5, freq: "분기배당" },
-                    "JEPI": { yield: 7.5, freq: "월배당" },
-                    "JEPQ": { yield: 9.2, freq: "월배당" },
-                    "SPY": { yield: 1.3, freq: "분기배당" },
-                    "QQQ": { yield: 0.6, freq: "분기배당" },
-                    "VNQ": { yield: 3.8, freq: "분기배당" },
-                    "TLT": { yield: 3.6, freq: "월배당" }
-                };
-
-                if (dps === 0 && BACKUP_ETF_DATA[ticker]) {
-                    yieldPercent = BACKUP_ETF_DATA[ticker].yield;
-                    frequency = BACKUP_ETF_DATA[ticker].freq;
-                    dps = price * (yieldPercent / 100);
-                    console.log(`Using backup data for ${ticker}`);
-                }
-
-                // ETF인데 이름이 없으면 티커로
-                if (industry.includes("Fund") || industry.includes("ETF") || BACKUP_ETF_DATA[ticker]) {
-                    if (ticker === 'SCHD') name = "Schwab US Dividend Equity ETF";
-                    if (ticker === 'JEPI') name = "JPMorgan Equity Premium Income ETF";
-                    if (ticker === 'JEPQ') name = "JPMorgan Nasdaq Equity Premium Income ETF";
-                }
-
-                // 주기 추론
-                let frequency = "연배당"; // 기본
-                if (Array.isArray(dividendData) && dividendData.length >= 2) {
-                    // 최근 배당들을 날짜순 정렬 (Finnhub은 보통 내림차순)
-                    // 1년간 배당 횟수 체크
-                    // 간단히: 지난 12개월(365일) 간 데이터 개수
-                    const oneYearAgo = new Date();
-                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-                    const recentDivs = dividendData.filter(d => new Date(d.date) > oneYearAgo);
-                    const count = recentDivs.length;
-
-                    if (count >= 11) frequency = "월배당";
-                    else if (count >= 3) frequency = "분기배당";
-                    else if (count >= 1) frequency = "반기/연배당";
-                } else {
-                    // 데이터 없으면 Yield가 있으면 '알수없음' 혹은 그냥 분기(미국주식 다수)로 추정하진 말고 '-'
-                    // 보통 미국 배당주는 분기가 많음.
-                    if (yieldPercent > 0) frequency = "분기배당(추정)";
-                    else frequency = "-";
-                }
-
-                // O (Realty Income) 등 알려진 월배당 예외처리 (재미 요소)
-                if (ticker === 'O' || ticker === 'JEPI') frequency = "월배당";
-
-                currentStockData = {
-                    price: price,
-                    yield: yieldPercent,
-                    dps: dps,
-                    name: name,
-                    frequency: frequency
-                };
-
-                // UI 업데이트
-                document.getElementById('displayTicker').innerText = ticker;
-                document.getElementById('displayFullName').innerText = name;
-                document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
-                document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
-                document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;
-                document.getElementById('displayFrequency').innerText = frequency;
-
-                document.getElementById('stockInfoCard').style.display = 'block';
-
-                calculateDividend();
-
-            } catch (error) {
-                console.error(error);
-                alert('데이터 조회 실패. 티커를 확인해주세요.');
-            } finally {
-                searchBtn.innerText = originalBtnText;
-                searchBtn.disabled = false;
             }
-        }
 
         function calculateDividend() {
-            const shares = parseFloat(document.getElementById('shares').value) || 0;
+                const shares = parseFloat(document.getElementById('shares').value) || 0;
 
-            let price, yieldPercent, dps, frequencyStr;
+                let price, yieldPercent, dps, frequencyStr;
 
-            if (isManualMode) {
-                price = parseFloat(document.getElementById('inputPrice').value) || 0;
-                yieldPercent = parseFloat(document.getElementById('inputYield').value) || 0;
-                dps = price * (yieldPercent / 100);
-                frequencyStr = "사용자 설정"; // 수동 모드는 연배당 기준 단순화
-            } else {
-                price = currentStockData.price;
-                yieldPercent = currentStockData.yield;
-                dps = currentStockData.dps;
-                frequencyStr = currentStockData.frequency;
-            }
+                if (isManualMode) {
+                    price = parseFloat(document.getElementById('inputPrice').value) || 0;
+                    yieldPercent = parseFloat(document.getElementById('inputYield').value) || 0;
+                    dps = price * (yieldPercent / 100);
+                    frequencyStr = "사용자 설정"; // 수동 모드는 연배당 기준 단순화
+                } else {
+                    price = currentStockData.price;
+                    yieldPercent = currentStockData.yield;
+                    dps = currentStockData.dps;
+                    frequencyStr = currentStockData.frequency;
+                }
 
-            const totalAsset = price * shares;
-            const annualDividend = dps * shares;
-            const monthlyAvg = annualDividend / 12;
+                const totalAsset = price * shares;
+                const annualDividend = dps * shares;
+                const monthlyAvg = annualDividend / 12;
 
-            // 주기별 배당금 계산
-            let divCount = 1;
-            let periodName = "연";
+                // 주기별 배당금 계산
+                let divCount = 1;
+                let periodName = "연";
 
-            if (frequencyStr.includes("월배당")) {
-                divCount = 12;
-                periodName = "월";
-            } else if (frequencyStr.includes("분기")) {
-                divCount = 4;
-                periodName = "분기";
-            } else if (frequencyStr.includes("반기")) {
-                divCount = 2;
-                periodName = "반기";
-            }
+                if (frequencyStr.includes("월배당")) {
+                    divCount = 12;
+                    periodName = "월";
+                } else if (frequencyStr.includes("분기")) {
+                    divCount = 4;
+                    periodName = "분기";
+                } else if (frequencyStr.includes("반기")) {
+                    divCount = 2;
+                    periodName = "반기";
+                }
 
-            const periodicDividend = annualDividend / divCount;
+                const periodicDividend = annualDividend / divCount;
 
-            // 표시 업데이트
-            document.getElementById('totalAssetValue').innerText = `$${totalAsset.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                // 표시 업데이트
+                document.getElementById('totalAssetValue').innerText = `$${totalAsset.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-            // 내 예상 배당금 (주기 / 연)
-            if (divCount > 1) {
-                // 주기가 1년보다 짧은 경우 (월, 분기 등) -> 두 줄로 표시
-                const periodAmt = periodicDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const annualAmt = annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                // 내 예상 배당금 (주기 / 연)
+                if (divCount > 1) {
+                    // 주기가 1년보다 짧은 경우 (월, 분기 등) -> 두 줄로 표시
+                    const periodAmt = periodicDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const annualAmt = annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                document.getElementById('displayMyDividend').innerHTML = `
+                    document.getElementById('displayMyDividend').innerHTML = `
                     <div style="font-size: 0.95em;">$${periodAmt} <span style="font-size: 0.8em; color: #555;">(${periodName})</span></div>
                     <div style="font-size: 0.8em; color: #0044aa; margin-top: 2px;">$${annualAmt} <span style="font-size: 0.8em; color: #666;">(연)</span></div>
                 `;
-            } else {
-                // 연배당이거나 파악 불가 시 -> 기존대로 하나만 표시
-                document.getElementById('displayMyDividend').innerText = `$${annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                } else {
+                    // 연배당이거나 파악 불가 시 -> 기존대로 하나만 표시
+                    document.getElementById('displayMyDividend').innerText = `$${annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                }
+
+                // 원화 환산
+                document.getElementById('totalAssetKrw').innerText = Math.floor(totalAsset * EXCHANGE_RATE).toLocaleString() + "원";
+                // document.getElementById('totalDividendKrw').innerText = Math.floor(annualDividend * EXCHANGE_RATE).toLocaleString();
+
+                // 치킨 계산 (3만원 기준)
+                const monthlyKrw = monthlyAvg * EXCHANGE_RATE;
+                const chickens = (monthlyKrw / 30000).toFixed(1);
+                document.getElementById('chickenCount').innerText = `치킨 ${chickens}마리 🍗`;
+
+                if (isManualMode) {
+                    document.getElementById('displayTicker').innerText = "CUSTOM";
+                    document.getElementById('displayFullName').innerText = "수동 입력 종목";
+                    document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
+                    document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
+                    document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;
+                    document.getElementById('displayFrequency').innerText = "연배당(기본)";
+                    document.getElementById('stockInfoCard').style.display = 'block';
+                }
+
+                document.getElementById('stockInfoCard').scrollIntoView({ behavior: 'smooth' });
             }
-
-            // 원화 환산
-            document.getElementById('totalAssetKrw').innerText = Math.floor(totalAsset * EXCHANGE_RATE).toLocaleString() + "원";
-            // document.getElementById('totalDividendKrw').innerText = Math.floor(annualDividend * EXCHANGE_RATE).toLocaleString();
-
-            // 치킨 계산 (3만원 기준)
-            const monthlyKrw = monthlyAvg * EXCHANGE_RATE;
-            const chickens = (monthlyKrw / 30000).toFixed(1);
-            document.getElementById('chickenCount').innerText = `치킨 ${chickens}마리 🍗`;
-
-            if (isManualMode) {
-                document.getElementById('displayTicker').innerText = "CUSTOM";
-                document.getElementById('displayFullName').innerText = "수동 입력 종목";
-                document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
-                document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
-                document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;
-                document.getElementById('displayFrequency').innerText = "연배당(기본)";
-                document.getElementById('stockInfoCard').style.display = 'block';
-            }
-
-            document.getElementById('stockInfoCard').scrollIntoView({ behavior: 'smooth' });
-        }
     </script>
 </body>
 

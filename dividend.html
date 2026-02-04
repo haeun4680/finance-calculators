@@ -213,10 +213,10 @@
             광고 영역
         </div>
 
-        <!-- 쿠팡 파트너스 추천 -->
+        <!-- 쿠팡 파트너스 추천 (Updated) -->
         <div class="coupang-recommend">
             <h3>📈 주식 투자 필독서</h3>
-            <a href="https://link.coupang.com/a/dFJmqB" target="_blank" class="btn-coupang">
+            <a href="https://link.coupang.com/a/dFSg5t" target="_blank" class="btn-coupang">
                 📚 베스트셀러 보기
             </a>
             <p style="font-size: 0.75rem; color: #aaa; margin-top: 15px;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를
@@ -263,91 +263,61 @@
                 return;
             }
 
+            // [Client-Side Fallback] 한국어 감지 시 네이버 통합검색 연결
+            // 서버 스크래핑 방식이 Vercel IP 차단으로 불안정하므로 안전하게 클라이언트 측에서 처리
+            const isKoreanInput = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(query) || /^[0-9]{6}$/.test(query);
+
+            if (isKoreanInput) {
+                const confirmNaver = confirm(`'${query}' 검색: 현재 서버 사정으로 한국 주식은 네이버에서 직접 확인해야 합니다.\n\n네이버 통합 검색(주가) 페이지를 열어드릴까요?`);
+                if (confirmNaver) {
+                    window.open(`https://search.naver.com/search.naver?query=${encodeURIComponent(query + " 주가")}`, '_blank');
+                    toggleManualMode(); // 수동 입력 모드 활성화로 계산 편의 제공
+                }
+                return;
+            }
+
             const searchBtn = document.getElementById('searchBtn');
             const originalBtnText = searchBtn.innerText;
             searchBtn.innerText = "검색중...";
             searchBtn.disabled = true;
 
             try {
-                // 1. 한국어 감지
-                const isKoreanInput = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(query) || /^[0-9]{6}$/.test(query);
+                // 1. Symbol Search API 호출 (미국 주식)
+                const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`);
+                const searchData = await searchRes.json();
 
-                if (isKoreanInput) {
-                    // [NEW] 내부 API로 한국 주식 검색 (Yahoo Finance Proxy)
-                    console.log(`Searching Korean Stock: ${query}`);
-                    const searchRes = await fetch(`/api/kstock?mode=search&q=${encodeURIComponent(query)}`);
-
-                    if (!searchRes.ok) {
-                        throw new Error("검색 결과를 찾을 수 없습니다.");
-                    }
-                    const searchData = await searchRes.json();
-                    const symbol = searchData.symbol; // e.g., 005930.KS
-
-                    // 상세 정보 조회
-                    console.log(`Fetching Quote for Symbol: ${symbol}`);
-                    const quoteRes = await fetch(`/api/kstock?mode=quote&symbol=${symbol}`);
-                    if (!quoteRes.ok) throw new Error("주가 정보를 가져올 수 없습니다.");
-                    const quoteData = await quoteRes.json();
-
-                    // 데이터 매핑 및 UI 업데이트
-                    updateUI({
-                        price: quoteData.price,
-                        yield: quoteData.yield,
-                        dps: quoteData.dps,
-                        name: quoteData.name,
-                        frequency: (quoteData.yield > 0) ? "연배당" : "-", // 한국은 보통 연배당
-                        currency: quoteData.currency
-                    }, symbol);
-
-                } else {
-                    // 2. 기존 로직 (미국 주식 - Finnhub)
-                    const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`);
-                    const searchData = await searchRes.json();
-
-                    if (!searchData.result || searchData.result.length === 0) {
-                        throw new Error('검색 결과가 없습니다.');
-                    }
-                    const bestMatch = searchData.result[0];
-                    await fetchStockDetails(bestMatch.symbol);
+                if (!searchData.result || searchData.result.length === 0) {
+                    throw new Error('검색 결과가 없습니다.');
                 }
+
+                // 검색 결과 중 가장 적절한 것 선택
+                const bestMatch = searchData.result[0];
+                const symbol = bestMatch.symbol;
+
+                // 검색된 심볼로 상세 정보 조회
+                await fetchStockDetails(symbol);
 
             } catch (error) {
                 console.error(error);
-                alert(`검색 실패: ${error.message}\n정확한 종목명을 입력하거나 수동 모드를 이용해주세요.`);
+
+                // 한국어 패턴이지만 위에서 안 걸러진 경우 or 403 에러
+                if (error.message.includes('403') || error.message.includes('PREMIUM')) {
+                    const confirmNaver = confirm(`죄송합니다. 데이터 소스 제한으로 정보를 가져올 수 없습니다.\n네이버 통합 검색 페이지를 여시겠습니까?`);
+                    if (confirmNaver) {
+                        window.open(`https://search.naver.com/search.naver?query=${encodeURIComponent(query + " 주가")}`, '_blank');
+                        toggleManualMode();
+                    }
+                } else {
+                    alert(`검색 실패: ${error.message}\n정확한 종목명을 입력하거나 수동 모드를 이용해주세요.`);
+                }
             } finally {
                 searchBtn.innerText = originalBtnText;
                 searchBtn.disabled = false;
             }
         }
 
-        // UI 업데이트 헬퍼 함수
-        function updateUI(data, ticker) {
-            currentStockData = {
-                price: data.price,
-                yield: data.yield,
-                dps: data.dps,
-                name: data.name,
-                frequency: data.frequency,
-                currency: data.currency
-            };
-
-            document.getElementById('displayTicker').innerText = ticker;
-            document.getElementById('displayFullName').innerText = data.name;
-
-            const currencySymbol = data.currency === 'KRW' ? '₩' : '$';
-            document.getElementById('displayPrice').innerText = `${currencySymbol}${data.price.toLocaleString()}`;
-            document.getElementById('displayYield').innerText = `${data.yield.toFixed(2)}%`;
-            document.getElementById('displayDPS').innerText = `${currencySymbol}${data.dps.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-            document.getElementById('displayFrequency').innerText = data.frequency;
-
-            document.getElementById('stockInfoCard').style.display = 'block';
-            calculateDividend();
-        }
-
         async function fetchStockDetails(ticker) {
-            // 2. 상세 정보 조회 (기존 fetchStockData 로직 활용)
-            // 에러 핸들링을 위해 개별 Promise 처리
-
+            // 2. 상세 정보 조회 (Finnhub Data)
             const quotePromise = fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => null);
             const profilePromise = fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => null);
             const metricPromise = fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => null);
@@ -356,18 +326,16 @@
             const [quoteData, profileData, metricData, dividendData] = await Promise.all([quotePromise, profilePromise, metricPromise, dividendPromise]);
 
             if (!quoteData || !quoteData.c) {
-                // 권한 없음 에러 체크 (한국 주식 등)
                 if (quoteData && quoteData.error && quoteData.error.includes("access")) {
                     throw new Error("403_PREMIUM");
                 }
                 throw new Error(`'${ticker}'의 주가 정보를 가져올 수 없습니다.`);
             }
 
-            // --- 데이터 파싱 및 처리 ---
+            // --- 데이터 파싱 ---
             const price = quoteData.c;
             let name = (profileData && profileData.name) ? profileData.name : ticker;
-            const industry = (profileData && profileData.finnhubIndustry) ? profileData.finnhubIndustry : "";
-            const currency = (profileData && profileData.currency) ? profileData.currency : "USD"; // KRW detection
+            const currency = (profileData && profileData.currency) ? profileData.currency : "USD";
 
             const metrics = (metricData && metricData.metric) ? metricData.metric : {};
 
@@ -376,7 +344,7 @@
                 metrics.dividendYield5Y || 0;
             let dps = metrics.dividendPerShareAnnual || metrics.dividendPerShareTTM || 0;
 
-            // Fallback 1: History에서 계산
+            // Fallback Logic
             if (dps === 0 && Array.isArray(dividendData) && dividendData.length > 0) {
                 const oneYearAgo = new Date();
                 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
@@ -385,12 +353,11 @@
                 if (dps > 0 && price > 0) yieldPercent = (dps / price) * 100;
             }
 
-            // Fallback 2: Yield 역산
             if (dps === 0 && yieldPercent > 0) {
                 dps = price * (yieldPercent / 100);
             }
 
-            // Fallback 3: Hardcoded Data for Popular/YieldMax ETFs
+            // Hardcoded Backup (YieldMax, etc.)
             const BACKUP_ETF_DATA = {
                 "SCHD": { yield: 3.5, freq: "분기배당" },
                 "JEPI": { yield: 7.5, freq: "월배당" },
@@ -406,7 +373,6 @@
 
             let frequency = "연배당";
 
-            // 백업 데이터 적용 (Yield가 없거나 이상할 때)
             if (BACKUP_ETF_DATA[ticker]) {
                 if (dps === 0 || yieldPercent === 0) {
                     yieldPercent = BACKUP_ETF_DATA[ticker].yield;
@@ -415,7 +381,6 @@
                 }
             }
 
-            // 이름 보정
             if (BACKUP_ETF_DATA[ticker]) {
                 if (ticker === 'SCHD') name = "Schwab US Dividend Equity ETF";
                 if (ticker === 'JEPI') name = "JPMorgan Equity Premium Income ETF";
@@ -425,7 +390,6 @@
                 if (ticker === 'CONY') name = "YieldMax COIN Option Income Strategy ETF";
             }
 
-            // 주기 추론
             if (!BACKUP_ETF_DATA[ticker]) {
                 if (Array.isArray(dividendData) && dividendData.length >= 2) {
                     const oneYearAgo = new Date();
@@ -442,10 +406,9 @@
                 if (ticker === 'O' || ticker === 'JEPI') frequency = "월배당";
             }
 
-            // 상태 업데이트
             currentStockData = { price, yield: yieldPercent, dps, name, frequency, currency };
 
-            // UI 업데이트
+            // UI Update
             document.getElementById('displayTicker').innerText = ticker;
             document.getElementById('displayFullName').innerText = name;
 
@@ -456,10 +419,6 @@
             document.getElementById('displayFrequency').innerText = frequency;
 
             document.getElementById('stockInfoCard').style.display = 'block';
-
-            // 입력창에 실제 티커로 업데이트 (선택 사항)
-            // document.getElementById('tickerInput').value = ticker;
-
             calculateDividend();
         }
 
@@ -472,7 +431,7 @@
                 yieldPercent = parseFloat(document.getElementById('inputYield').value) || 0;
                 dps = price * (yieldPercent / 100);
                 frequencyStr = "사용자 설정";
-                currency = "USD"; // Manual assumes USD for simplicity or we could add a toggle
+                currency = "USD";
             } else {
                 price = currentStockData.price;
                 yieldPercent = currentStockData.yield;
@@ -484,7 +443,6 @@
             const totalAsset = price * shares;
             const annualDividend = dps * shares;
 
-            // 주기 계산
             let divCount = 1;
             let periodName = "연";
             if (frequencyStr.includes("월")) { divCount = 12; periodName = "월"; }
@@ -494,7 +452,6 @@
             const periodicDividend = annualDividend / divCount;
             const currencySymbol = currency === 'KRW' ? '₩' : '$';
 
-            // Display Values
             document.getElementById('totalAssetValue').innerText = `${currencySymbol}${totalAsset.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
 
             if (divCount > 1) {
@@ -508,14 +465,12 @@
                 document.getElementById('displayMyDividend').innerText = `${currencySymbol}${annualDividend.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
             }
 
-            // 원화 환산
             let totalAssetKrw = 0;
             let monthlyDividendKrw = 0;
 
             if (currency === 'KRW') {
                 totalAssetKrw = totalAsset;
                 monthlyDividendKrw = annualDividend / 12;
-                // 한국 주식은 환산 불필요 -> 숨기거나 그대로 표시
                 document.getElementById('krwConversionRow').style.color = '#ccc';
                 document.getElementById('totalAssetKrw').innerText = "-";
             } else {
@@ -525,12 +480,10 @@
                 document.getElementById('totalAssetKrw').innerText = Math.floor(totalAssetKrw).toLocaleString() + "원";
             }
 
-            // 치킨 계산
             const chickens = (monthlyDividendKrw / 30000).toFixed(1);
             document.getElementById('chickenCount').innerText = `치킨 ${chickens}마리 🍗`;
 
             if (isManualMode) {
-                // ... (Manual display update if needed, kept simple)
                 document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
                 document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
                 document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;

@@ -546,3 +546,19 @@ footer {
 .btn-coupang:active {
     transform: translateY(0);
 }
+/* Card Accents */
+.card-accent-yellow { border-left: 5px solid #ffab00; }
+.card-accent-green { border-left: 5px solid #00c4cc; } /* Secondary */
+.card-accent-purple { border-left: 5px solid #845ef7; }
+.card-accent-brown { border-left: 5px solid #8d6e63; }
+.card-accent-red { border-left: 5px solid #e4293f; } /* Coupang Red ish */
+.card-accent-blue { border-left: 5px solid #0066ff; } /* Primary */
+
+/* Hover enhancement for accents */
+.card-accent-yellow:hover { border-color: #ffab00; background-color: #fff9e6; }
+.card-accent-green:hover { border-color: #00c4cc; background-color: #e6fcfd; }
+.card-accent-purple:hover { border-color: #845ef7; background-color: #f3f0ff; }
+.card-accent-brown:hover { border-color: #8d6e63; background-color: #fdfefe; }
+.card-accent-red:hover { border-color: #e4293f; background-color: #fff0f2; }
+.card-accent-blue:hover { border-color: #0066ff; background-color: #f0f7ff; }
+

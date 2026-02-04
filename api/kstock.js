@@ -1,115 +1,101 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-import iconv from 'iconv-lite';
+import yahooFinance from 'yahoo-finance2';
 
 export default async function handler(request, response) {
     const { mode, q, symbol } = request.query;
+
+    // Set Cache Control for Vercel (Cache for 60 seconds)
+    response.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+
+    // Hardcoded map for popular Korean stocks to bypass Search API failures or ambiguity
+    const POPULAR_KOREAN_STOCKS = {
+        "삼성전자": "005930.KS",
+        "삼전": "005930.KS",
+        "samsung": "005930.KS",
+        "삼성전자우": "005935.KS",
+        "현대차": "005380.KS",
+        "현대자동차": "005380.KS",
+        "hyundai": "005380.KS",
+        "sk하이닉스": "000660.KS",
+        "하이닉스": "000660.KS",
+        "hynix": "000660.KS",
+        "카카오": "035720.KS",
+        "kakao": "035720.KS",
+        "네이버": "035420.KS",
+        "naver": "035420.KS",
+        "posco": "005490.KS",
+        "포스코": "005490.KS",
+        "posco홀딩스": "005490.KS",
+        "kb금융": "105560.KS",
+        "신한지주": "055550.KS",
+        "하나금융지주": "086790.KS",
+        "우리금융지주": "316140.KS",
+        "기아": "000270.KS",
+        "lg에너지솔루션": "373220.KS",
+        "macquarie": "088980.KS",
+        "맥쿼리인프라": "088980.KS"
+    };
 
     try {
         // 1. SEARCH MODE
         if (mode === 'search') {
             if (!q) throw new Error('Query is required');
 
-            // Naver Finance Search (using mobile site for cleaner JSON/HTML or desktop site)
-            // Actually desktop searchList is reliable.
-            // But we need to handle EUC-KR query encoding if we use the old search.
-            // Let's use the 'ac' (autocomplete) API which is JSON and simpler.
-            // https://ac.finance.naver.com/ac?q={encoded}&target=stock
+            // Quick lookup in hardcoded map
+            const cleanQuery = q.toLowerCase().replace(/\s+/g, '');
+            if (POPULAR_KOREAN_STOCKS[cleanQuery]) {
+                const symbol = POPULAR_KOREAN_STOCKS[cleanQuery];
+                return response.status(200).json({ symbol: symbol, name: q }); // Return mapped symbol immediately
+            }
 
-            const encodeUrl = `https://ac.finance.naver.com/ac?q=${encodeURIComponent(q)}&target=stock`;
+            // Yahoo Finance Search
+            const result = await yahooFinance.search(q);
+            const quotes = result.quotes || [];
 
-            const res = await axios.get(encodeUrl, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                }
-            });
-
-            const data = res.data;
-            // Result format: {"items": [[["005380", "현대차", ...]]]}
-
-            if (!data.items || data.items.length === 0 || data.items[0].length === 0) {
+            if (quotes.length === 0) {
                 return response.status(404).json({ error: 'Not found' });
             }
 
-            // Best match
-            const match = data.items[0][0]; // ["005380", "현대차", "005380", "KOSPI", ...]
-            const code = match[0];
-            const name = match[1];
+            // Prioritize Korean listings if the query looks Korean or is a 6-digit code
+            // But user typically searches "Samsung" which returns many.
+            // Filter for .KS (KOSPI) or .KQ (KOSDAQ)
+            const koreanMatch = quotes.find(item => item.symbol.endsWith('.KS') || item.symbol.endsWith('.KQ'));
+            const bestMatch = koreanMatch || quotes[0];
 
-            return response.status(200).json({ symbol: code, name: name });
+            return response.status(200).json({
+                symbol: bestMatch.symbol,
+                name: bestMatch.shortname || bestMatch.longname || bestMatch.symbol
+            });
         }
 
         // 2. QUOTE MODE
         if (mode === 'quote') {
             if (!symbol) throw new Error('Symbol is required');
-            // symbol is "005930" (Naver code)
 
-            const url = `https://finance.naver.com/item/main.naver?code=${symbol}`;
+            const quote = await yahooFinance.quoteSummary(symbol, { modules: ['price', 'summaryDetail', 'defaultKeyStatistics'] });
 
-            // Need responseType arraybuffer for decoding EUC-KR
-            const res = await axios.get(url, {
-                responseType: 'arraybuffer',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0'
-                }
-            });
+            const priceVal = quote.price?.regularMarketPrice;
+            const currency = quote.price?.currency || 'KRW';
+            const name = quote.price?.shortName || quote.price?.longName || symbol;
 
-            const html = iconv.decode(res.data, 'EUC-KR');
-            const $ = cheerio.load(html);
+            // Dividend Data
+            // trailingAnnualDividendRate is practically DPS for TTM
+            // dividendRate is the indicated annual dividend rate
+            let dps = quote.summaryDetail?.dividendRate || quote.summaryDetail?.trailingAnnualDividendRate || 0;
 
-            // Parse Price
-            const noToday = $('.no_today .blind').first().text().replace(/,/g, '');
-            const price = parseFloat(noToday);
+            // Dividend Yield
+            let yieldPercent = (quote.summaryDetail?.dividendYield || quote.summaryDetail?.trailingAnnualDividendYield || 0) * 100;
 
-            // Parse Name
-            const name = $('.wrap_company h2 a').text();
-
-            // Parse Dividend Yield / DPS
-            // Look for table with headers "배당수익률"
-            // It's usually in the 'per_table' or similar. 
-            // Simpler: Use the "종목분석" table data often found in `div.section.cop_analysis` but that's complex.
-            // Let's grab it from the summary chart area if available, OR
-            // Use Finnhub fallback logic? No, we need Naver data.
-
-            // Try '배당수익률' in the 'lwidth' table (Investment info)
-            // #_dvr ID might exist?
-
-            // Robust generic finding:
-            let yieldPercent = 0;
-            let dps = 0;
-
-            // Attempt to find dividend yield text in summary
-            // Often in #tab_con1 (Corporate Analysis) -> but that's dynamic.
-            // Check the "시가배당률" row in `.per_table` is not always there for all stocks.
-
-            // Let's try to infer from last year's dividend if present in the 'financial summary' table.
-            // Target: `.cop_analysis .c0` is recent dividend.
-
-            // For simple usage, let's look for "현금배당수익률" in the finance summary table.
-            // Or simpler: Just return price and name. User can input Yield manually if zero.
-            // Wait, I promised automatic calculation.
-
-            // ID: #_dvr (Dividend Yield) - Naver adds ids to some spans
-            const dvrText = $('#_dvr').text(); // e.g. "2.51"
-            if (dvrText) {
-                yieldPercent = parseFloat(dvrText);
-            }
-
-            // If price exists, calculate DPS
-            if (price && yieldPercent) {
-                dps = price * (yieldPercent / 100);
-            }
-
-            if (!price) {
-                return response.status(500).json({ error: 'Failed to parse price' });
+            // Fallback: Calculate Yield if DPS exists but Yield is 0
+            if (yieldPercent === 0 && dps > 0 && priceVal > 0) {
+                yieldPercent = (dps / priceVal) * 100;
             }
 
             return response.status(200).json({
-                price,
-                yield: yieldPercent || 0,
-                dps: dps || 0,
-                name: name || symbol,
-                currency: 'KRW',
+                price: priceVal,
+                yield: yieldPercent,
+                dps: dps,
+                name: name,
+                currency: currency,
                 symbol: symbol
             });
         }

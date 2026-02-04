@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전세 월세 전환율 계산기 - 보증금 조절 시 월세 변화</title>
+    <meta name="description" content="전세를 월세로, 월세를 전세로 전환할 때 적정 금액은? 법정 전월세 전환율을 적용하여 보증금과 월세를 계산해 드립니다.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header>
+        <h1>전세 월세 전환율 계산기</h1>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← 메인으로 돌아가기</a>
+
+        <!-- 광고 영역 -->
+        <div class="ad-placeholder">
+            <!-- adsense-top -->
+            광고 영역
+        </div>
+
+        <section class="description-box">
+            <section class="description-box">
+                <h2>보증금과 월세, 어떻게 조절할까요?</h2>
+                <p>전세를 반전세로, 또는 월세를 전세로 돌릴 때 적정한 금액인지 미리 계산해보세요. (보통 연 4~6% 적용)</p>
+            </section>
+
+            <section class="calculator-section">
+                <div class="form-group">
+                    <label>계산 기준</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="conversionType" value="toRent" checked> 전세 → 월세 (보증금 ↓ 월세 ↑)
+                        </label>
+                        <label>
+                            <input type="radio" name="conversionType" value="toDeposit"> 월세 → 전세 (월세 ↓ 보증금 ↑)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="currentDeposit">현재 보증금 (만원)</label>
+                    <input type="number" id="currentDeposit" placeholder="예: 10000 (1억)" inputmode="numeric">
+                </div>
+
+                <div class="form-group" id="currentRentGroup" style="display:none;">
+                    <label for="currentRent">현재 월세 (만원)</label>
+                    <input type="number" id="currentRent" placeholder="예: 50" inputmode="numeric">
+                </div>
+
+                <div class="form-group">
+                    <label for="targetField">
+                        <span id="targetLabel">줄이고 싶은 보증금 액수 (만원)</span>
+                    </label>
+                    <input type="number" id="targetAmount" placeholder="예: 5000" inputmode="numeric">
+                    <p id="targetHelp" style="font-size: 0.85rem; color: #666; margin-top: 5px;">
+                        현재 보증금에서 얼마를 빼서 월세로 돌릴지 입력하세요.
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label for="conversionRate">전월세 전환율 (연 %)</label>
+                    <input type="number" id="conversionRate" value="5.0" step="0.1">
+                </div>
+
+                <button id="calcRentBtn" class="btn-primary">계산하기</button>
+            </section>
+
+            <!-- 광고 영역 -->
+            <div class="ad-placeholder">
+                <!-- adsense-middle -->
+                광고 영역
+            </div>
+
+            <section id="rentResultArea" class="result-box">
+                <h3 id="resultTitle" style="margin-bottom: 20px;">계산 결과</h3>
+
+                <div class="result-item highlight">
+                    <span class="label" id="resultLabel">예상 월세</span>
+                    <span class="value" id="resultValue">0원</span>
+                </div>
+
+                <div class="result-item">
+                    <span class="label">최종 보증금</span>
+                    <span class="value" id="finalDepositResult">0원</span>
+                </div>
+
+                <div class="result-item" id="finalRentRow">
+                    <span class="label">최종 월세</span>
+                    <span class="value" id="finalRentResult">0원</span>
+                </div>
+
+                <p class="disclaimer">
+                    ※ 주택임대차보호법상 전월세전환율 상한선은 ‘기준금리 + 2.0%’ 또는 ‘10%’ 중 낮은 비율입니다.
+                </p>
+            </section>
+
+            <!-- 쿠팡 파트너스 추천 -->
+            <section class="coupang-box">
+                <h3>🏠 이사/자취 필수템 추천</h3>
+                <div class="placeholder">
+                    여기에 쿠팡 파트너스 배너 코드를 붙여넣으세요.<br>
+                    추천 상품: 이사 박스, 청소 용품, 인테리어 소품<br>
+                    {{coupang-link}}
+                </div>
+                <p style="font-size: 0.75rem; color: #aaa; margin-top: 10px;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를
+                    제공받습니다.</p>
+            </section>
+
+            <section class="content-box">
+                <h2>전월세 전환율 계산 공식 이해하기</h2>
+                <p>전세를 월세로 전환하거나 그 반대의 경우, '전월세 전환율'이라는 비율을 사용하여 적정 금액을 산정합니다. 주택임대차보호법에 따르면, 집주인은 기존 전세를 월세로 전환할 때
+                    <strong>‘기준금리 + 2.0%’</strong> 또는 <strong>‘10%’</strong> 중 낮은 비율을 초과할 수 없습니다.</p>
+
+                <h3>❓ 전세 보증금을 낮추면 월세는 얼마?</h3>
+                <p>예를 들어, 보증금 1억원을 줄이고 월세로 전환한다면, 연 5% 적용 시 연간 500만원(월 약 41만원)의 월세를 추가로 부담하게 됩니다. 반대로 월세를 전세로 돌릴 때는
+                    집주인과의 협의가 더욱 중요합니다.</p>
+            </section>
+
+            <!-- 광고 영역 -->
+            <div class="ad-placeholder">
+                <!-- adsense-bottom -->
+                광고 영역
+            </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 생활 재무 계산기 모음</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

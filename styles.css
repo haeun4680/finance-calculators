@@ -504,3 +504,45 @@ footer {
     font-size: 0.9rem;
     border: 1px dashed #ddd;
 }
+
+/* Coupang Recommendation Button Style */
+.coupang-recommend {
+    background-color: #fff0f2;
+    /* Very light pink background */
+    border: 1px solid #ffd1dd;
+    border-radius: var(--radius-md);
+    padding: 24px;
+    margin: 32px 0;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.coupang-recommend h3 {
+    color: #e4293f;
+    /* Coupang Red */
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.btn-coupang {
+    display: inline-block;
+    background: linear-gradient(135deg, #e4293f, #ff4055);
+    color: white !important;
+    padding: 16px 28px;
+    border-radius: 50px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(228, 41, 63, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-coupang:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(228, 41, 63, 0.4);
+}
+
+.btn-coupang:active {
+    transform: translateY(0);
+}

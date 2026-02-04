@@ -117,25 +117,13 @@
             광고 영역
         </div>
 
+        <!-- API Key Setting Removed for better UX -->
         <section class="description-box">
             <h2>내 배당금은 얼마일까? (미국 주식)</h2>
-            <p>티커(Ticker)만 입력하면 실시간 주가와 배당률을 자동으로 가져옵니다. <br>(예: Apple = AAPL, Realty Income = O)</p>
+            <p>티커(Ticker)만 입력하면 실시간 주가와 배당률을 자동으로 가져옵니다.<br>
+                <span style="font-size: 0.9rem; color: #666;">(데이터 제공: Finnhub / 15분 지연 시세일 수 있습니다)</span>
+            </p>
         </section>
-
-        <!-- API Key Setting -->
-        <div class="api-key-box" id="apiKeySection">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <label for="finnhubKey" style="font-weight: bold;">Finnhub API 키 입력</label>
-                <a href="https://finnhub.io/register" target="_blank" style="color: #0066ff; font-size: 0.8rem;">무료 키
-                    발급받기 →</a>
-            </div>
-            <input type="password" id="finnhubKey" placeholder="여기에 API Key를 붙여넣으세요">
-            <div style="margin-top: 5px; text-align: right;">
-                <button id="saveKeyBtn"
-                    style="padding: 5px 10px; font-size: 0.8rem; background: #eee; border: none; border-radius: 4px; cursor: pointer;">저장하기</button>
-            </div>
-            <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">* 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.</p>
-        </div>
 
         <section class="calculator-section">
             <div class="form-group">
@@ -244,22 +232,8 @@
     <script>
         const EXCHANGE_RATE = 1400; // 단순화를 위한 고정 환율
 
-        // 로드 시 API 키 확인
-        window.onload = function () {
-            const savedKey = localStorage.getItem('finnhub_key');
-            if (savedKey) {
-                document.getElementById('finnhubKey').value = savedKey;
-            }
-        };
-
-        document.getElementById('saveKeyBtn').addEventListener('click', function () {
-            const key = document.getElementById('finnhubKey').value.trim();
-            if (key) {
-                localStorage.setItem('finnhub_key', key);
-                alert('API 키가 저장되었습니다.');
-                document.getElementById('apiKeySection').style.display = 'none';
-            }
-        });
+        // 🔹 여기에 Finnhub API Key를 입력하세요 (방문자에게는 안 보임)
+        const FINNHUB_API_KEY = "cpk716hr01qiv444aig0cpk716hr01qiv444aigg";
 
         let isManualMode = false;
 
@@ -284,20 +258,28 @@
             if (isManualMode) return;
 
             const ticker = document.getElementById('ticker').value.toUpperCase();
-            const apiKey = localStorage.getItem('finnhub_key') || document.getElementById('finnhubKey').value;
+
+            // API Key가 없으면 알림
+            if (!FINNHUB_API_KEY || FINNHUB_API_KEY === "YOUR_FINNHUB_API_KEY") {
+                alert('서버 관리자에게 API 키 설정을 요청하세요. (현재 수동 모드로 전환됩니다)');
+                toggleManualMode();
+                return;
+            }
 
             if (!ticker) {
-                alert('티커를 입력하세요.');
+                alert('티커를 입력하세요. (예: AAPL)');
                 return;
             }
-            if (!apiKey) {
-                alert('API 키가 필요합니다. 상단에서 키를 입력하거나 수동 모드를 이용하세요.');
-                return;
-            }
+
+            // 로딩 표시 (버튼 텍스트 변경)
+            const searchBtn = document.getElementById('searchBtn');
+            const originalBtnText = searchBtn.innerText;
+            searchBtn.innerText = "조회중...";
+            searchBtn.disabled = true;
 
             try {
                 // 1. 현재가 조회 (Quote)
-                const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`);
+                const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`);
                 const quoteData = await quoteRes.json();
 
                 if (!quoteData.c) {
@@ -305,17 +287,16 @@
                 }
 
                 // 2. 배당 정보 조회 (Basic Financials)
-                const metricRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${apiKey}`);
+                const metricRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_API_KEY}`);
                 const metricData = await metricRes.json();
 
                 // 데이터 파싱
                 const price = quoteData.c; // Current price
-                // metric.series.annual can be complex, usually metric.metric.dividendYieldIndicatedAnnual
                 const metrics = metricData.metric || {};
                 const yieldPercent = metrics.dividendYieldIndicatedAnnual || metrics.dividendYield5Y || 0;
                 let dps = metrics.dividendPerShareAnnual || 0;
 
-                // DPS가 0이고 Yield가 있으면 역산
+                // DPS가 0이고 Yield가 있으면 역산 (Yield = DPS / Price * 100)
                 if (dps === 0 && yieldPercent > 0) {
                     dps = price * (yieldPercent / 100);
                 }
@@ -326,7 +307,7 @@
                     dps: dps
                 };
 
-                // UI 업데이트 (미리보기)
+                // UI 업데이트
                 document.getElementById('displayTicker').innerText = ticker;
                 document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
                 document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
@@ -339,8 +320,11 @@
 
             } catch (error) {
                 console.error(error);
-                alert('데이터 조회 실패: 티커를 확인하거나 API 제한을 초과했을 수 있습니다. 수동 입력을 이용해보세요.');
-                toggleManualMode();
+                alert('데이터를 가져오지 못했습니다. 올바른 미국 주식 티커인지 확인해주세요. (예: O, TSLA, AAPL)');
+                // 에러 시 수동 모드 제안은 하지 않고 그냥 유지
+            } finally {
+                searchBtn.innerText = originalBtnText;
+                searchBtn.disabled = false;
             }
         }
 

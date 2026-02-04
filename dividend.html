@@ -320,13 +320,27 @@
 
                 // 데이터 파싱
                 const price = quoteData.c;
-                const name = profileData.name || ticker; // 이름 없으면 티커 사용
-                const metrics = metricData.metric || {};
-                const yieldPercent = metrics.dividendYieldIndicatedAnnual || metrics.dividendYield5Y || 0;
-                let dps = metrics.dividendPerShareAnnual || 0;
+                const name = profileData.name || ticker;
+                const industry = profileData.finnhubIndustry || "";
 
+                // ETF의 경우 metric 필드가 조금 다를 수 있음
+                const metrics = metricData.metric || {};
+
+                // Yield 우선순위: Indicated > TTM > 5Y
+                const yieldPercent = metrics.dividendYieldIndicatedAnnual ||
+                    metrics.currentDividendYieldTTM ||
+                    metrics.dividendYield5Y || 0;
+
+                let dps = metrics.dividendPerShareAnnual || metrics.dividendPerShareTTM || 0;
+
+                // DPS가 0이고 Yield가 있으면 역산
                 if (dps === 0 && yieldPercent > 0) {
                     dps = price * (yieldPercent / 100);
+                }
+
+                // ETF인데 이름이 없으면 티커로
+                if (industry.includes("Fund") || industry.includes("ETF")) {
+                    // ETF 특화 로직 (필요 시 추가)
                 }
 
                 // 주기 추론

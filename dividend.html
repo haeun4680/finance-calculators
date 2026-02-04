@@ -386,26 +386,58 @@
         function calculateDividend() {
             const shares = parseFloat(document.getElementById('shares').value) || 0;
 
-            let price, yieldPercent, dps;
+            let price, yieldPercent, dps, frequencyStr;
 
             if (isManualMode) {
                 price = parseFloat(document.getElementById('inputPrice').value) || 0;
                 yieldPercent = parseFloat(document.getElementById('inputYield').value) || 0;
                 dps = price * (yieldPercent / 100);
+                frequencyStr = "사용자 설정"; // 수동 모드는 연배당 기준 단순화
             } else {
                 price = currentStockData.price;
                 yieldPercent = currentStockData.yield;
                 dps = currentStockData.dps;
+                frequencyStr = currentStockData.frequency;
             }
 
             const totalAsset = price * shares;
             const annualDividend = dps * shares;
             const monthlyAvg = annualDividend / 12;
 
+            // 주기별 배당금 계산
+            let divCount = 1;
+            let periodName = "연";
+
+            if (frequencyStr.includes("월배당")) {
+                divCount = 12;
+                periodName = "월";
+            } else if (frequencyStr.includes("분기")) {
+                divCount = 4;
+                periodName = "분기";
+            } else if (frequencyStr.includes("반기")) {
+                divCount = 2;
+                periodName = "반기";
+            }
+
+            const periodicDividend = annualDividend / divCount;
+
             // 표시 업데이트
             document.getElementById('totalAssetValue').innerText = `$${totalAsset.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            // 내 예상 배당금 (Total Annual)
-            document.getElementById('displayMyDividend').innerText = `$${annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // 내 예상 배당금 (주기 / 연)
+            if (divCount > 1) {
+                // 주기가 1년보다 짧은 경우 (월, 분기 등) -> 두 줄로 표시
+                const periodAmt = periodicDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const annualAmt = annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                document.getElementById('displayMyDividend').innerHTML = `
+                    <div style="font-size: 0.95em;">$${periodAmt} <span style="font-size: 0.8em; color: #555;">(${periodName})</span></div>
+                    <div style="font-size: 0.8em; color: #0044aa; margin-top: 2px;">$${annualAmt} <span style="font-size: 0.8em; color: #666;">(연)</span></div>
+                `;
+            } else {
+                // 연배당이거나 파악 불가 시 -> 기존대로 하나만 표시
+                document.getElementById('displayMyDividend').innerText = `$${annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
 
             // 원화 환산
             document.getElementById('totalAssetKrw').innerText = Math.floor(totalAsset * EXCHANGE_RATE).toLocaleString() + "원";
@@ -422,7 +454,7 @@
                 document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
                 document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
                 document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;
-                document.getElementById('displayFrequency').innerText = "사용자 설정";
+                document.getElementById('displayFrequency').innerText = "연배당(기본)";
                 document.getElementById('stockInfoCard').style.display = 'block';
             }
 
@@ -431,5 +463,4 @@
     </script>
 </body>
 
-</html>
 ```

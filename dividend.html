@@ -60,21 +60,31 @@
 
         .metric-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
+            /* Mobile: 2x2 */
             gap: 15px;
             margin-bottom: 15px;
         }
 
+        @media (min-width: 600px) {
+            .metric-grid {
+                grid-template-columns: repeat(4, 1fr);
+                /* Desktop: 4 columns */
+            }
+        }
+
         .metric-item {
             background-color: #f9fbfd;
-            padding: 10px;
+            padding: 15px 10px;
             border-radius: 8px;
+            text-align: center;
         }
 
         .metric-label {
             font-size: 0.8rem;
             color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            white-space: nowrap;
         }
 
         .metric-value {
@@ -83,7 +93,11 @@
             color: #333;
         }
 
-        .dividend-highlight {
+        .metric-value.highlight-blue {
+            color: #0066ff;
+        }
+
+        .metric-value.highlight-red {
             color: #e4293f;
         }
 
@@ -162,47 +176,54 @@
         <!-- Result Section -->
         <div id="stockInfoCard" class="stock-info-card">
             <div class="stock-header">
-                <div class="ticker-name" id="displayTicker">AAPL</div>
+                <div style="display: flex; flex-direction: column;">
+                    <span class="ticker-name" id="displayTicker">AAPL</span>
+                    <span id="displayFullName" style="font-size: 0.9rem; color: #666; font-weight: normal;">Apple
+                        Inc</span>
+                </div>
                 <div class="current-price" id="displayPrice">$0.00</div>
             </div>
 
             <div class="metric-grid">
                 <div class="metric-item">
                     <div class="metric-label">시가 배당률</div>
-                    <div class="metric-value dividend-highlight" id="displayYield">0.00%</div>
+                    <div class="metric-value highlight-red" id="displayYield">0.00%</div>
+                </div>
+                <!-- 배당 주기 (신규) -->
+                <div class="metric-item">
+                    <div class="metric-label">배당 주기</div>
+                    <div class="metric-value" id="displayFrequency">-</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">주당 배당금(연)</div>
                     <div class="metric-value" id="displayDPS">$0.00</div>
                 </div>
+                <!-- 내 예상 배당금 (신규) -->
+                <div class="metric-item" style="background-color: #e6f0ff;">
+                    <div class="metric-label" style="color: #0066ff;">내 예상 배당금</div>
+                    <div class="metric-value highlight-blue" id="displayMyDividend">$0.00</div>
+                </div>
             </div>
 
-            <div class="result-box" style="margin-top: 0; background: #f4f6f8; border: none;">
-                <div class="result-item highlight">
-                    <span class="label">내 총 자산 (평가금)</span>
-                    <span class="value" id="totalAssetValue">$0.00</span>
-                </div>
-                <!-- 환율 대략 1350원 적용 표시 -->
-                <p style="text-align: right; margin: -10px 0 15px; font-size: 0.8rem; color: #888;">(약 <span
-                        id="totalAssetKrw">0</span>원, 환율 1400원 기준)</p>
-
-                <div class="result-item">
-                    <span class="label">연간 총 배당금</span>
-                    <span class="value" id="totalAnnualDividend">$0.00</span>
-                </div>
-                <!-- 원화 환산 -->
-                <p style="text-align: right; margin: -10px 0 15px; font-size: 0.8rem; color: #888;">(약 <span
-                        id="totalDividendKrw">0</span>원)</p>
-
-                <div class="result-item">
-                    <span class="label">월 평균 배당금</span>
-                    <span class="value" id="monthlyDividend">$0.00</span>
+            <div class="result-box"
+                style="margin-top: 0; background: #fff; border-top: 1px dashed #eee; padding-top: 20px;">
+                <!-- 환산 금액 정보는 아래로 이동 -->
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem;">
+                    <span>내 총 평가금:</span>
+                    <strong id="totalAssetValue">$0.00</strong>
                 </div>
                 <div
-                    style="margin-top: 15px; padding: 10px; background: #fff0f2; border-radius: 8px; text-align: center;">
-                    <span style="font-size: 0.9rem; color: #666;">이 돈이면 매달...</span><br>
-                    <strong style="color: #e4293f; font-size: 1.1rem;" id="chickenCount">치킨 0마리 🍗</strong>
-                    <span style="font-size: 0.9rem;"> 가능!</span>
+                    style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 0.9rem; color: #888;">
+                    <span>(원화 환산)</span>
+                    <span id="totalAssetKrw">0원</span>
+                </div>
+
+                <div
+                    style="margin-top: 15px; padding: 15px; background: #fff0f2; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(228, 41, 63, 0.05);">
+                    <span style="font-size: 1rem; color: #555;">이 주식들을 모으면 매달...</span><br>
+                    <div style="margin-top: 8px;">
+                        <strong style="color: #e4293f; font-size: 1.4rem;" id="chickenCount">치킨 0마리 🍗</strong>
+                    </div>
                 </div>
             </div>
         </div>
@@ -251,7 +272,9 @@
         let currentStockData = {
             price: 0,
             yield: 0,
-            dps: 0
+            dps: 0,
+            name: "",
+            frequency: "연배당" // 기본값
         };
 
         async function fetchStockData() {
@@ -259,7 +282,6 @@
 
             const ticker = document.getElementById('ticker').value.toUpperCase();
 
-            // API Key가 없으면 알림
             if (!FINNHUB_API_KEY || FINNHUB_API_KEY === "YOUR_FINNHUB_API_KEY") {
                 alert('서버 관리자에게 API 키 설정을 요청하세요. (현재 수동 모드로 전환됩니다)');
                 toggleManualMode();
@@ -271,57 +293,90 @@
                 return;
             }
 
-            // 로딩 표시 (버튼 텍스트 변경)
             const searchBtn = document.getElementById('searchBtn');
             const originalBtnText = searchBtn.innerText;
             searchBtn.innerText = "조회중...";
             searchBtn.disabled = true;
 
             try {
-                // 1. 현재가 조회 (Quote)
-                const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`);
-                const quoteData = await quoteRes.json();
+                // 1. 현재가 (Quote)
+                const quotePromise = fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json());
+
+                // 2. 회사 정보 (Profile2) - 이름 가져오기
+                const profilePromise = fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json());
+
+                // 3. 재무 지표 (Metrics) - 배당률, DPS
+                const metricPromise = fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_API_KEY}`).then(r => r.json());
+
+                // 4. 배당 내역 (Dividends) - 주기 추론용 (최근 1년치 확인)
+                // Note: Finnhub 무료 플랜에서 dividend endpoint가 제한적일 수 있으나 시도
+                const dividendPromise = fetch(`https://finnhub.io/api/v1/stock/dividend?symbol=${ticker}&from=2024-01-01&to=2026-12-31&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => []);
+
+                const [quoteData, profileData, metricData, dividendData] = await Promise.all([quotePromise, profilePromise, metricPromise, dividendPromise]);
 
                 if (!quoteData.c) {
                     throw new Error('주가 정보를 가져올 수 없습니다.');
                 }
 
-                // 2. 배당 정보 조회 (Basic Financials)
-                const metricRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_API_KEY}`);
-                const metricData = await metricRes.json();
-
                 // 데이터 파싱
-                const price = quoteData.c; // Current price
+                const price = quoteData.c;
+                const name = profileData.name || ticker; // 이름 없으면 티커 사용
                 const metrics = metricData.metric || {};
                 const yieldPercent = metrics.dividendYieldIndicatedAnnual || metrics.dividendYield5Y || 0;
                 let dps = metrics.dividendPerShareAnnual || 0;
 
-                // DPS가 0이고 Yield가 있으면 역산 (Yield = DPS / Price * 100)
                 if (dps === 0 && yieldPercent > 0) {
                     dps = price * (yieldPercent / 100);
                 }
 
+                // 주기 추론
+                let frequency = "연배당"; // 기본
+                if (Array.isArray(dividendData) && dividendData.length >= 2) {
+                    // 최근 배당들을 날짜순 정렬 (Finnhub은 보통 내림차순)
+                    // 1년간 배당 횟수 체크
+                    // 간단히: 지난 12개월(365일) 간 데이터 개수
+                    const oneYearAgo = new Date();
+                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+                    const recentDivs = dividendData.filter(d => new Date(d.date) > oneYearAgo);
+                    const count = recentDivs.length;
+
+                    if (count >= 11) frequency = "월배당";
+                    else if (count >= 3) frequency = "분기배당";
+                    else if (count >= 1) frequency = "반기/연배당";
+                } else {
+                    // 데이터 없으면 Yield가 있으면 '알수없음' 혹은 그냥 분기(미국주식 다수)로 추정하진 말고 '-'
+                    // 보통 미국 배당주는 분기가 많음.
+                    if (yieldPercent > 0) frequency = "분기배당(추정)";
+                    else frequency = "-";
+                }
+
+                // O (Realty Income) 등 알려진 월배당 예외처리 (재미 요소)
+                if (ticker === 'O' || ticker === 'JEPI') frequency = "월배당";
+
                 currentStockData = {
                     price: price,
                     yield: yieldPercent,
-                    dps: dps
+                    dps: dps,
+                    name: name,
+                    frequency: frequency
                 };
 
                 // UI 업데이트
                 document.getElementById('displayTicker').innerText = ticker;
+                document.getElementById('displayFullName').innerText = name;
                 document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
                 document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
                 document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;
+                document.getElementById('displayFrequency').innerText = frequency;
 
                 document.getElementById('stockInfoCard').style.display = 'block';
 
-                // 자동 계산 트리거
                 calculateDividend();
 
             } catch (error) {
                 console.error(error);
-                alert('데이터를 가져오지 못했습니다. 올바른 미국 주식 티커인지 확인해주세요. (예: O, TSLA, AAPL)');
-                // 에러 시 수동 모드 제안은 하지 않고 그냥 유지
+                alert('데이터 조회 실패. 티커를 확인해주세요.');
             } finally {
                 searchBtn.innerText = originalBtnText;
                 searchBtn.disabled = false;
@@ -349,12 +404,12 @@
 
             // 표시 업데이트
             document.getElementById('totalAssetValue').innerText = `$${totalAsset.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('totalAnnualDividend').innerText = `$${annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('monthlyDividend').innerText = `$${monthlyAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            // 내 예상 배당금 (Total Annual)
+            document.getElementById('displayMyDividend').innerText = `$${annualDividend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             // 원화 환산
-            document.getElementById('totalAssetKrw').innerText = Math.floor(totalAsset * EXCHANGE_RATE).toLocaleString();
-            document.getElementById('totalDividendKrw').innerText = Math.floor(annualDividend * EXCHANGE_RATE).toLocaleString();
+            document.getElementById('totalAssetKrw').innerText = Math.floor(totalAsset * EXCHANGE_RATE).toLocaleString() + "원";
+            // document.getElementById('totalDividendKrw').innerText = Math.floor(annualDividend * EXCHANGE_RATE).toLocaleString();
 
             // 치킨 계산 (3만원 기준)
             const monthlyKrw = monthlyAvg * EXCHANGE_RATE;
@@ -363,9 +418,11 @@
 
             if (isManualMode) {
                 document.getElementById('displayTicker').innerText = "CUSTOM";
+                document.getElementById('displayFullName').innerText = "수동 입력 종목";
                 document.getElementById('displayPrice').innerText = `$${price.toFixed(2)}`;
                 document.getElementById('displayYield').innerText = `${yieldPercent.toFixed(2)}%`;
                 document.getElementById('displayDPS').innerText = `$${dps.toFixed(2)}`;
+                document.getElementById('displayFrequency').innerText = "사용자 설정";
                 document.getElementById('stockInfoCard').style.display = 'block';
             }
 
@@ -375,3 +432,4 @@
 </body>
 
 </html>
+```

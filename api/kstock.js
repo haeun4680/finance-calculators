@@ -8,31 +8,26 @@ export default async function handler(request, response) {
 
     // Hardcoded map for popular Korean stocks to bypass Search API failures or ambiguity
     const POPULAR_KOREAN_STOCKS = {
-        "삼성전자": "005930.KS",
-        "삼전": "005930.KS",
-        "samsung": "005930.KS",
-        "삼성전자우": "005935.KS",
-        "현대차": "005380.KS",
-        "현대자동차": "005380.KS",
-        "hyundai": "005380.KS",
-        "sk하이닉스": "000660.KS",
-        "하이닉스": "000660.KS",
-        "hynix": "000660.KS",
-        "카카오": "035720.KS",
-        "kakao": "035720.KS",
-        "네이버": "035420.KS",
-        "naver": "035420.KS",
-        "posco": "005490.KS",
-        "포스코": "005490.KS",
-        "posco홀딩스": "005490.KS",
-        "kb금융": "105560.KS",
-        "신한지주": "055550.KS",
-        "하나금융지주": "086790.KS",
-        "우리금융지주": "316140.KS",
+        // Main
+        "삼성전자": "005930.KS", "삼전": "005930.KS", "samsung": "005930.KS",
+        "현대차": "005380.KS", "현대자동차": "005380.KS", "hyundai": "005380.KS",
+        "sk하이닉스": "000660.KS", "하이닉스": "000660.KS", "hynix": "000660.KS",
+        "카카오": "035720.KS", "kakao": "035720.KS",
+        "네이버": "035420.KS", "naver": "035420.KS",
+        "posco": "005490.KS", "포스코": "005490.KS", "posco홀딩스": "005490.KS",
         "기아": "000270.KS",
         "lg에너지솔루션": "373220.KS",
-        "macquarie": "088980.KS",
-        "맥쿼리인프라": "088980.KS"
+        "macquarie": "088980.KS", "맥쿼리인프라": "088980.KS",
+
+        // Preferred Stocks (우선주) - High Dividend Yields
+        "삼성전자우": "005935.KS", "삼성우": "005935.KS", "삼전우": "005935.KS",
+        "현대차우": "005385.KS", "현대차2우b": "005387.KS", "현대차3우b": "005389.KS",
+        "lg화학우": "051915.KS",
+        "lg전자우": "066575.KS",
+        "s-oil우": "010955.KS", "에쓰오일우": "010955.KS",
+        "한화3우b": "00088K.KS", // Popular high dividend
+        "대신증권우": "003545.KS",
+        "nh투자증권우": "005945.KS"
     };
 
     try {

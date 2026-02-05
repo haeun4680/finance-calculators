@@ -249,7 +249,15 @@ function initSalaryCalculator() {
                 width: 180,
                 height: 180
             });
-            document.getElementById('qrModal').style.display = 'flex';
+            const modal = document.getElementById('qrModal');
+            modal.style.display = 'flex';
+
+            // Close on outside click
+            modal.onclick = (event) => {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            };
         });
     }
 

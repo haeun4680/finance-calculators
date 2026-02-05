@@ -93,169 +93,7 @@
             cursor: pointer;
             font-size: 0.9rem;
         }
-    </style>
-</head>
 
-<body>
-    <header>
-        <h1>주식 배당금 계산기</h1>
-    </header>
-
-    <main>
-        <a href="index.html" class="back-link">← 메인으로 돌아가기</a>
-
-        <!-- 광고 영역 -->
-        <div class="ad-placeholder">
-            <!-- adsense-top -->
-            광고 영역
-        </div>
-
-        <section class="description-box">
-            <h2>내 배당금은 얼마일까?</h2>
-            <p>티커(Ticker) 또는 회사명(예: Apple, 삼성전자)을 입력하세요.<br>
-                미국 주식뿐만 아니라 한국 주식도 조회가 가능합니다.<br>
-                <span style="font-size: 0.9rem; color: #666;">(데이터: 실시간 연동)</span>
-            </p>
-        </section>
-
-        <section class="calculator-section">
-            <div class="form-group">
-                <label for="tickerInput">종목 검색 (티커 또는 회사명)</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="tickerInput" placeholder="예: AAPL, Samsung, 배당..."
-                        onkeypress="if(event.key === 'Enter') startSearch()">
-                    <button id="searchBtn" class="btn-primary" style="width: 80px; margin: 0;">조회</button>
-                </div>
-            </div>
-
-            <!-- Manual Input Fallback -->
-            <div id="manualInputSection"
-                style="display: none; border-top: 1px dashed #ddd; margin-top: 20px; padding-top: 20px;">
-                <div class="form-group">
-                    <label for="inputPrice">주당 가격</label>
-                    <input type="number" id="inputPrice" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label for="inputYield">배당률 (%)</label>
-                    <input type="number" id="inputYield" placeholder="0" step="0.01">
-                </div>
-            </div>
-
-            <div class="toggle-manual">
-                <button class="toggle-btn" onclick="toggleManualMode()">수동 입력으로 전환</button>
-            </div>
-
-            <div class="form-group" style="margin-top: 20px;">
-                <label for="shares">보유 수량 (주)</label>
-                <input type="number" id="shares" placeholder="예: 100" value="10">
-            </div>
-
-            <button id="calcDividendBtn" class="btn-primary" onclick="calculateDividend()">계산하기</button>
-        </section>
-
-        <!-- Result Section -->
-        <div id="stockInfoCard" class="stock-info-card">
-            <div class="stock-header">
-                <div style="display: flex; flex-direction: column;">
-                    <span class="ticker-name" id="displayTicker">-</span>
-                    <span id="displayFullName" style="font-size: 0.9rem; color: #666; font-weight: normal;">-</span>
-                </div>
-                <div style="text-align: right;">
-                    <div class="current-price" id="displayPrice">-</div>
-                    <!-- Tax Toggle -->
-                    <div class="tax-toggle-container">
-                        <span id="taxToggleLabel">세전 기준</span>
-                        <label class="switch">
-                            <input type="checkbox" id="taxToggle" onchange="toggleTaxMode()">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="metric-grid">
-                <div class="metric-item">
-                    <div class="metric-label">배당률</div>
-                    <div class="metric-value highlight-red" id="displayYield">0.00%</div>
-                </div>
-                <!-- 배당 주기 -->
-                <div class="metric-item">
-                    <div class="metric-label">배당 주기</div>
-                    <div class="metric-value" id="displayFrequency">-</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">주당 배당금(연)</div>
-                    <div class="metric-value" id="displayDPS">-</div>
-                </div>
-                <!-- 내 예상 배당금 -->
-                <div class="metric-item" style="background-color: #e6f0ff;">
-                    <div class="metric-label" style="color: #0066ff;">내 예상 배당금 (연)</div>
-                    <div class="metric-value highlight-blue" id="displayMyDividend">-</div>
-                </div>
-            </div>
-
-            <div class="result-box"
-                style="margin-top: 0; background: #fff; border-top: 1px dashed #eee; padding-top: 20px;">
-
-                <!-- Tax Info Row -->
-                <div id="taxInfoRow"
-                    style="display: none; justify-content: space-between; margin-bottom: 20px; font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 10px; border-radius: 8px;">
-                    <div>
-                        <span>세전: </span><strong id="preTaxTotal">-</strong>
-                    </div>
-                    <div style="color: #666;">
-                        (세금 <span id="taxRateDisplay">15.4%</span>)
-                    </div>
-                    <div>
-                        <span>세후: </span><strong id="postTaxTotal" style="color: #0066ff;">-</strong>
-                    </div>
-                </div>
-
-                <!-- 환산 금액 정보 -->
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem;">
-                    <span>내 총 평가금:</span>
-                    <strong id="totalAssetValue">-</strong>
-                </div>
-                <div id="krwConversionRow"
-                    style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 0.9rem; color: #888;">
-                    <span>(원화 환산)</span>
-                    <span id="totalAssetKrw">-</span>
-                </div>
-
-                <div
-                    style="margin-top: 15px; padding: 15px; background: #fff0f2; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(228, 41, 63, 0.05);">
-                    <span style="font-size: 1rem; color: #555;">이 주식들을 모으면 매달...</span><br>
-                    <div style="margin-top: 8px;">
-                        <strong style="color: #e4293f; font-size: 1.4rem;" id="chickenCount">치킨 0마리 🍗</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 광고 영역 -->
-        <div class="ad-placeholder">
-            <!-- adsense-middle -->
-            광고 영역
-        </div>
-
-        <!-- 쿠팡 파트너스 추천 (Updated) -->
-        <div class="coupang-recommend">
-            <h3>📈 주식 투자 필독서</h3>
-            <a href="https://link.coupang.com/a/dFSg5t" target="_blank" class="btn-coupang">
-                📚 베스트셀러 보기
-            </a>
-            <p style="font-size: 0.75rem; color: #aaa; margin-top: 15px;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를
-                제공받습니다.</p>
-        </div>
-
-    </main>
-
-    <footer>
-        <p>&copy; 2026 생활 재무 계산기 모음</p>
-    </footer>
-
-    <style>
-        /* ... existing styles ... */
         /* Tax Toggle Switch */
         .tax-toggle-container {
             display: flex;
@@ -316,11 +154,203 @@
             transform: translateX(20px);
         }
     </style>
+</head>
 
-    <!-- ... inside result card ... -->
+<body>
+    <header>
+        <h1>주식 배당금 계산기</h1>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← 메인으로 돌아가기</a>
+
+        <!-- 광고 영역 -->
+        <div class="ad-placeholder">
+            <!-- adsense-top -->
+            광고 영역
+        </div>
+
+        <section class="description-box">
+            <h2>내 배당금은 얼마일까?</h2>
+            <p>티커(Ticker) 또는 회사명(예: Apple, 삼성전자)을 입력하세요.<br>
+                미국 주식뿐만 아니라 한국 주식도 조회가 가능합니다.<br>
+                <span style="font-size: 0.9rem; color: #666;">(데이터: 실시간 연동)</span>
+            </p>
+        </section>
+
+        <section class="calculator-section">
+            <div class="form-group">
+                <label for="tickerInput">종목 검색 (티커 또는 회사명)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="tickerInput" placeholder="예: AAPL, Samsung, 배당..."
+                        onkeypress="if(event.key === 'Enter') startSearch()">
+                    <button id="searchBtn" class="btn-primary" style="width: 80px; margin: 0;">조회</button>
+                </div>
+            </div>
+
+            <!-- Manual Input Fallback -->
+            <div id="manualInputSection"
+                style="display: none; border-top: 1px dashed #ddd; margin-top: 20px; padding-top: 20px;">
+                <div class="form-group">
+                    <label for="inputPrice">주당 가격</label>
+                    <input type="number" id="inputPrice" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputYield">배당률 (%)</label>
+                    <input type="number" id="inputYield" placeholder="0" step="0.01">
+                </div>
+            </div>
+
+            <div class="toggle-manual">
+                <button class="toggle-btn" onclick="toggleManualMode()">수동 입력으로 전환</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="shares">보유 수량 (주)</label>
+                <input type="number" id="shares" placeholder="예: 100" value="10">
+            </div>
+
+            <button id="calcDividendBtn" class="btn-primary" onclick="calculateDividend(true)">계산하기</button>
+        </section>
+
+        <!-- Result Section -->
+        <div id="stockInfoCard" class="stock-info-card">
+            <div class="stock-header">
+                <div style="display: flex; flex-direction: column;">
+                    <span class="ticker-name" id="displayTicker">-</span>
+                    <span id="displayFullName" style="font-size: 0.9rem; color: #666; font-weight: normal;">-</span>
+                </div>
+                <div style="text-align: right;">
+                    <div class="current-price" id="displayPrice">-</div>
+                    <!-- Tax Toggle -->
+                    <div class="tax-toggle-container">
+                        <span id="taxToggleLabel">세전 기준</span>
+                        <label class="switch">
+                            <input type="checkbox" id="taxToggle" onchange="toggleTaxMode()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-item">
+                    <div class="metric-label">배당률</div>
+                    <div class="metric-value highlight-red" id="displayYield">0.00%</div>
+                </div>
+                <!-- 배당 주기 -->
+                <div class="metric-item">
+                    <div class="metric-label">배당 주기</div>
+                    <div class="metric-value" id="displayFrequency">-</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">주당 배당금(연)</div>
+                    <div class="metric-value" id="displayDPS">-</div>
+                </div>
+                <!-- 내 예상 배당금 -->
+                <div class="metric-item" style="background-color: #e6f0ff;">
+                    <div class="metric-label" style="color: #0066ff;">내 예상 배당금 (연)</div>
+                    <div class="metric-value highlight-blue" id="displayMyDividend">-</div>
+                </div>
+            </div>
+
+            <div class="result-box"
+                style="margin-top: 0; background: #fff; border-top: 1px dashed #eee; padding-top: 20px;">
+
+                <!-- Tax Info Row -->
+                <div id="taxInfoRow"
+                    style="display: none; justify-content: space-between; margin-bottom: 20px; font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                    <div>
+                        <span>세전: </span><strong id="preTaxTotal">-</strong>
+                    </div>
+                    <div>
+                        <span id="taxRateDisplay">세금 -</span>
+                    </div>
+                    <div>
+                        <span>세후: </span><strong id="postTaxTotal" style="color: #0066ff;">-</strong>
+                    </div>
+                </div>
+
+                <!-- 환산 금액 정보 -->
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem;">
+                    <span>내 총 평가금:</span>
+                    <strong id="totalAssetValue">-</strong>
+                </div>
+                <div id="krwConversionRow"
+                    style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 0.9rem; color: #888;">
+                    <span>(원화 환산)</span>
+                    <span id="totalAssetKrw">-</span>
+                </div>
+
+                <div
+                    style="margin-top: 15px; padding: 15px; background: #fff0f2; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(228, 41, 63, 0.05);">
+                    <span style="font-size: 1rem; color: #555;">이 주식들을 모으면 매달...</span><br>
+                    <div style="margin-top: 8px;">
+                        <strong style="color: #e4293f; font-size: 1.4rem;" id="chickenCount">치킨 0마리 🍗</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 광고 영역 -->
+        <div class="ad-placeholder">
+            <!-- adsense-middle -->
+            광고 영역
+        </div>
+
+        <!-- 쿠팡 파트너스 추천 (Updated) -->
+        <div class="coupang-recommend">
+            <h3>📈 주식 투자 필독서</h3>
+            <a href="https://link.coupang.com/a/dFSg5t" target="_blank" class="btn-coupang">
+                📚 베스트셀러 보기
+            </a>
+            <p style="font-size: 0.75rem; color: #aaa; margin-top: 15px;">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를
+                제공받습니다.</p>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 생활 재무 계산기 모음</p>
+    </footer>
+
     <script>
-        // ... existing vars ...
+        const FIXED_EXCHANGE_RATE = 1400; // USD to KRW 고정 환율
+        const FINNHUB_API_KEY = "d61btbpr01quq5pfobo0d61btbpr01quq5pfobog";
+
+        let isManualMode = false;
         let isPostTax = false; // Default Pre-tax
+
+        let currentStockData = {
+            price: 0,
+            yield: 0,
+            dps: 0,
+            name: "",
+            frequency: "연배당",
+            currency: "USD"
+        };
+
+        // 한국 주식 배당 주기 매핑 (주요 종목)
+        const KR_STOCK_FREQUENCY = {
+            "005930.KS": "분기배당", // 삼성전자
+            "005935.KS": "분기배당", // 삼성전자우
+            "005380.KS": "분기배당", // 현대차 (최근 분기배당 실시)
+            "005490.KS": "분기배당", // POSCO홀딩스
+            "000660.KS": "분기배당", // SK하이닉스
+            "105560.KS": "분기배당", // KB금융
+            "055550.KS": "분기배당", // 신한지주
+            "086790.KS": "분기배당", // 하나금융지주
+            "316140.KS": "분기배당", // 우리금융지주
+            "033780.KS": "분기배당", // KT&G
+        };
+
+        function toggleManualMode() {
+            isManualMode = !isManualMode;
+            const manualSection = document.getElementById('manualInputSection');
+            const toggleBtn = document.querySelector('.toggle-btn');
+            manualSection.style.display = isManualMode ? 'block' : 'none';
+            toggleBtn.innerText = isManualMode ? 'API 조회 자동 모드로 전환' : '수동 입력으로 전환';
+        }
 
         function toggleTaxMode() {
             isPostTax = document.getElementById('taxToggle').checked;
@@ -340,6 +370,203 @@
                 }
             };
             window.requestAnimationFrame(step);
+        }
+
+        document.getElementById('searchBtn').addEventListener('click', startSearch);
+
+        async function startSearch() {
+            if (isManualMode) return;
+            const query = document.getElementById('tickerInput').value.trim();
+            if (!query) {
+                alert('검색어(티커 또는 회사명)를 입력하세요.');
+                return;
+            }
+
+            const searchBtn = document.getElementById('searchBtn');
+            const originalBtnText = searchBtn.innerText;
+            searchBtn.innerText = "검색중...";
+            searchBtn.disabled = true;
+
+            try {
+                // 한국어 감지
+                const isKoreanInput = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(query) || /^[0-9]{6}$/.test(query);
+
+                if (isKoreanInput) {
+                    console.log(`Searching Korean Stock via Proxy: ${query}`);
+
+                    // 1. Search
+                    const searchRes = await fetch(`/api/kstock?mode=search&q=${encodeURIComponent(query)}`);
+                    if (!searchRes.ok) throw new Error("검색 결과를 찾을 수 없습니다.");
+                    const searchData = await searchRes.json();
+
+                    const symbol = searchData.symbol;
+
+                    // 2. Quote
+                    console.log(`Fetching Quote for Symbol: ${symbol}`);
+                    const quoteRes = await fetch(`/api/kstock?mode=quote&symbol=${symbol}`);
+                    if (!quoteRes.ok) throw new Error("주가 정보를 가져올 수 없습니다.");
+                    const quoteData = await quoteRes.json();
+
+                    // Frequency Logic for KR Stocks
+                    let freq = "연배당";
+                    if (KR_STOCK_FREQUENCY[symbol]) {
+                        freq = KR_STOCK_FREQUENCY[symbol];
+                    } else if (quoteData.yield > 0) {
+                        if (query.includes("현대차") || symbol === "005380.KS") freq = "분기배당";
+                    }
+
+                    // Update UI
+                    updateUI({
+                        price: quoteData.price,
+                        yield: quoteData.yield,
+                        dps: quoteData.dps,
+                        name: quoteData.name,
+                        frequency: freq,
+                        currency: quoteData.currency
+                    }, symbol);
+
+                } else {
+                    // 2. Finnhub (US)
+                    const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`);
+                    const searchData = await searchRes.json();
+
+                    if (!searchData.result || searchData.result.length === 0) {
+                        throw new Error('검색 결과가 없습니다.');
+                    }
+                    const bestMatch = searchData.result[0];
+                    await fetchStockDetails(bestMatch.symbol);
+                }
+
+            } catch (error) {
+                console.error(error);
+                if (isKoreanInput || error.message.includes('403')) {
+                    const confirmNaver = confirm(`죄송합니다. 내부 데이터 조회에 실패했습니다. (${error.message})\n네이버 통합 검색 페이지를 열어드릴까요?`);
+                    if (confirmNaver) {
+                        window.open(`https://search.naver.com/search.naver?query=${encodeURIComponent(query + " 주가")}`, '_blank');
+                        toggleManualMode();
+                    }
+                } else {
+                    alert(`검색 실패: ${error.message}\n정확한 종목명을 입력하거나 수동 모드를 이용해주세요.`);
+                }
+            } finally {
+                searchBtn.innerText = originalBtnText;
+                searchBtn.disabled = false;
+            }
+        }
+
+        function updateUI(data, ticker) {
+            currentStockData = {
+                price: data.price,
+                yield: data.yield,
+                dps: data.dps,
+                name: data.name,
+                frequency: data.frequency,
+                currency: data.currency
+            };
+
+            document.getElementById('displayTicker').innerText = ticker;
+            document.getElementById('displayFullName').innerText = data.name;
+
+            const currencySymbol = data.currency === 'KRW' ? '₩' : '$';
+            document.getElementById('displayPrice').innerText = `${currencySymbol}${data.price.toLocaleString()}`;
+            document.getElementById('displayYield').innerText = `${data.yield.toFixed(2)}%`;
+            document.getElementById('displayDPS').innerText = `${currencySymbol}${data.dps.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+            document.getElementById('displayFrequency').innerText = data.frequency;
+
+            if (data.currency === 'KRW') {
+                document.getElementById('krwConversionRow').style.display = 'none';
+            } else {
+                document.getElementById('krwConversionRow').style.display = 'flex';
+            }
+
+            document.getElementById('stockInfoCard').style.display = 'block';
+            calculateDividend(true);
+        }
+
+        async function fetchStockDetails(ticker) {
+            const quotePromise = fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => null);
+            const profilePromise = fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => null);
+            const metricPromise = fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => null);
+            const dividendPromise = fetch(`https://finnhub.io/api/v1/stock/dividend?symbol=${ticker}&from=2024-01-01&to=2026-12-31&token=${FINNHUB_API_KEY}`).then(r => r.json()).catch(e => []);
+
+            const [quoteData, profileData, metricData, dividendData] = await Promise.all([quotePromise, profilePromise, metricPromise, dividendPromise]);
+
+            if (!quoteData || !quoteData.c) {
+                if (quoteData && quoteData.error && quoteData.error.includes("access")) {
+                    throw new Error("403_PREMIUM");
+                }
+                throw new Error(`'${ticker}'의 주가 정보를 가져올 수 없습니다.`);
+            }
+
+            const price = quoteData.c;
+            let name = (profileData && profileData.name) ? profileData.name : ticker;
+            const currency = (profileData && profileData.currency) ? profileData.currency : "USD";
+            const metrics = (metricData && metricData.metric) ? metricData.metric : {};
+
+            let yieldPercent = metrics.dividendYieldIndicatedAnnual || metrics.currentDividendYieldTTM || metrics.dividendYield5Y || 0;
+            let dps = metrics.dividendPerShareAnnual || metrics.dividendPerShareTTM || 0;
+
+            if (dps === 0 && Array.isArray(dividendData) && dividendData.length > 0) {
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                const ttmDividends = dividendData.filter(d => new Date(d.date) > oneYearAgo);
+                dps = ttmDividends.reduce((sum, item) => sum + item.amount, 0);
+                if (dps > 0 && price > 0) yieldPercent = (dps / price) * 100;
+            }
+
+            if (dps === 0 && yieldPercent > 0) {
+                dps = price * (yieldPercent / 100);
+            }
+
+            // ETFs
+            const BACKUP_ETF_DATA = {
+                "SCHD": { yield: 3.5, freq: "분기배당" },
+                "JEPI": { yield: 7.5, freq: "월배당" },
+                "JEPQ": { yield: 9.2, freq: "월배당" },
+                "SPY": { yield: 1.3, freq: "분기배당" },
+                "QQQ": { yield: 0.6, freq: "분기배당" },
+                "VNQ": { yield: 3.8, freq: "분기배당" },
+                "TLT": { yield: 3.6, freq: "월배당" },
+                "TSLY": { yield: 50.0, freq: "월배당" },
+                "NVDY": { yield: 60.0, freq: "월배당" },
+                "CONY": { yield: 70.0, freq: "월배당" }
+            };
+
+            let frequency = "연배당";
+
+            if (BACKUP_ETF_DATA[ticker]) {
+                if (dps === 0 || yieldPercent === 0) {
+                    yieldPercent = BACKUP_ETF_DATA[ticker].yield;
+                    frequency = BACKUP_ETF_DATA[ticker].freq;
+                    dps = price * (yieldPercent / 100);
+                }
+            }
+            if (BACKUP_ETF_DATA[ticker]) {
+                if (ticker === 'SCHD') name = "Schwab US Dividend Equity ETF";
+                if (ticker === 'JEPI') name = "JPMorgan Equity Premium Income ETF";
+                if (ticker === 'JEPQ') name = "JPMorgan Nasdaq";
+                if (ticker === 'TSLY') name = "YieldMax TSLA Option Income Strategy ETF";
+                if (ticker === 'NVDY') name = "YieldMax NVDA Option Income Strategy ETF";
+                if (ticker === 'CONY') name = "YieldMax COIN Option Income Strategy ETF";
+            }
+
+            if (!BACKUP_ETF_DATA[ticker]) {
+                if (Array.isArray(dividendData) && dividendData.length >= 2) {
+                    const oneYearAgo = new Date();
+                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                    const recentDivs = dividendData.filter(d => new Date(d.date) > oneYearAgo);
+                    if (recentDivs.length >= 11) frequency = "월배당";
+                    else if (recentDivs.length >= 3) frequency = "분기배당";
+                    else if (recentDivs.length >= 1) frequency = "반기/연배당";
+                } else if (yieldPercent > 0) {
+                    frequency = "분기배당(추정)";
+                } else {
+                    frequency = "-";
+                }
+                if (ticker === 'O' || ticker === 'JEPI') frequency = "월배당";
+            }
+
+            updateUI({ price, yield: yieldPercent, dps, name, frequency, currency }, ticker);
         }
 
         function calculateDividend(animate = false) {
@@ -380,7 +607,6 @@
             const taxLabelSpan = document.getElementById('taxToggleLabel');
             if (taxLabelSpan) taxLabelSpan.innerText = isPostTax ? `세후 (세금 ${currency === 'KRW' ? '15.4%' : '15%'} 적용)` : "세전 기준";
 
-            // Determine Frequency
             let divCount = 1;
             let periodName = "연";
             if (frequencyStr.includes("월")) { divCount = 12; periodName = "월"; }
@@ -394,29 +620,9 @@
                 return `${currencySymbol}${val.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
             };
 
-            // Main Display Area
             const displayEl = document.getElementById('displayMyDividend');
 
-            // If animation requested
-            if (animate) {
-                // Simple numeric animation for the Annual Total part? 
-                // It's complex HTML content. Let's animate the Number part only if possible, or just the main bold number.
-                // Ideally we restructure displayMyDividend to contain discrete elements we can animate.
-                // For now, let's just animate the "annual" amount visually by re-rendering.
-                // Actually, standard count-up libraries work on simple text nodes. 
-                // Let's simplified HTML for main display: "Period Amount" + "Annual Amount"
-            }
-
-            // Let's refine the display HTML structure first to support animation cleanly
-            // We'll update the innerHTML directly.
-
-            // Animation logic inside the rendering:
-            // Since we rebuild HTML string, we can't easily animate *inside* it without parsing.
-            // Let's accept that for this iteration, we might just update the text or simpler animation.
-            // User asked for "Count up". 
-            // I will target specific span IDs if I can.
-
-            // Re-render
+            // HTML Structure
             let html = `
                 <div style="font-size: 0.95em;">
                     <span id="animPeriod">${formatMoney(periodicValue)}</span> 
@@ -427,7 +633,6 @@
                     <span style="font-size: 0.8em; color: #666;">(연)</span>
                 </div>
             `;
-            // Add warning if tax is applied
             if (isPostTax) {
                 html += `<div style="font-size: 0.75em; color: #e4293f; margin-top: 4px;">* 세후 금액입니다</div>`;
             }
@@ -439,15 +644,15 @@
                 animateValue(document.getElementById('animAnnual'), 0, displayValue, 800, formatMoney);
             }
 
-            // Other fields (Chicken, etc.)
+            // Tax Info Row (Detail)
+            document.getElementById('taxRateDisplay').innerText = `세금 ${currency === 'KRW' ? '15.4%' : '15.0%'}`;
+            document.getElementById('taxInfoRow').style.display = 'flex';
+            document.getElementById('preTaxTotal').innerText = `${currencySymbol}${annualDividend.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
+            document.getElementById('postTaxTotal').innerText = `${currencySymbol}${annualDividendPostTax.toLocaleString(undefined, { minimumFractionDigits: currency === 'KRW' ? 0 : 2, maximumFractionDigits: currency === 'KRW' ? 0 : 2 })}`;
+
+            // Chicken
             let totalAssetKrw = 0;
             let monthlyDividendKrw = 0;
-            // Chicken is always calculated on Post-tax Monthly roughly? Or consistent with displayed?
-            // User usually wants to know "Real Buying Power". Let's stick to Post-tax for chicken calc regardless of toggle, or follow toggle?
-            // "Lucky Dividend" visual usually implies "What I get". 
-            // Let's use the DISPLAYED value for consistency in user's mental model if toggle is present.
-            // If toggle is Pre-tax, Chicken is pre-tax logic? No, Chicken implies eating. Eating requires Net Pay.
-            // Let's keep Chicken on Post-Tax (Safe).
             const realAnnualNet = annualDividend * (1 - (currency === 'KRW' ? 0.154 : 0.15));
 
             if (currency === 'KRW') {
@@ -458,17 +663,12 @@
                 monthlyDividendKrw = (realAnnualNet / 12) * FIXED_EXCHANGE_RATE;
             }
             const chickens = (monthlyDividendKrw / 30000).toFixed(1);
-
-            // Animate Chicken?
-            const chickenEl = document.getElementById('chickenCount');
-            // Simple textual update for chicken
-            chickenEl.innerText = `치킨 ${chickens}마리 🍗`;
-
+            document.getElementById('chickenCount').innerText = `치킨 ${chickens}마리 🍗`;
 
             document.getElementById('totalAssetValue').innerText = formatMoney(price * shares);
             if (currency !== 'KRW') {
                 document.getElementById('krwConversionRow').style.display = 'flex';
-                // Also update this?
+                document.getElementById('totalAssetKrw').innerText = `₩${totalAssetKrw.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
             }
         }
     </script>

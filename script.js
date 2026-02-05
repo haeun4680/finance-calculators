@@ -157,8 +157,112 @@ function initSalaryCalculator() {
         return bestGuess;
     }
 
+    // State Parsing from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('salary')) {
+        const pSalary = urlParams.get('salary');
+        const pPeriod = urlParams.get('period') || 'annual';
+        const pTax = urlParams.get('tax') || 'pre';
+        const pNonTax = urlParams.get('nontax') || '20';
+        const pDep = urlParams.get('dep') || '1';
+        const pChild = urlParams.get('child') || '0';
+
+        document.getElementById('salaryInput').value = pSalary;
+        document.getElementById('nonTaxable').value = pNonTax;
+        document.getElementById('dependents').value = pDep;
+        document.getElementById('childrenUnder20').value = pChild;
+
+        // Set Toggles
+        periodOptions.forEach(o => o.classList.remove('active'));
+        document.querySelector(`#periodToggle .toggle-option[data-value="${pPeriod}"]`).classList.add('active');
+        currentPeriod = pPeriod;
+
+        taxOptions.forEach(o => o.classList.remove('active'));
+        document.querySelector(`#taxToggle .toggle-option[data-value="${pTax}"]`).classList.add('active');
+        currentTax = pTax;
+
+        updateLabel();
+
+        // Auto Calc
+        setTimeout(() => calcBtn.click(), 100);
+    }
+
+    // Share Functions
+    function generateShareUrl() {
+        const salary = document.getElementById('salaryInput').value;
+        const nonTax = document.getElementById('nonTaxable').value;
+        const dep = document.getElementById('dependents').value;
+        const child = document.getElementById('childrenUnder20').value;
+
+        const params = new URLSearchParams();
+        params.set('salary', salary);
+        params.set('period', currentPeriod);
+        params.set('tax', currentTax);
+        params.set('nontax', nonTax);
+        params.set('dep', dep);
+        params.set('child', child);
+
+        return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    }
+
+    const shareKakaoBtn = document.getElementById('shareKakaoBtn');
+    if (shareKakaoBtn) {
+        shareKakaoBtn.addEventListener('click', async () => {
+            const shareUrl = generateShareUrl();
+            const netPay = document.getElementById('monthlyNetPay').textContent;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: '2026 연봉 실수령액 계산기',
+                        text: `내 월 예상 실수령액은 ${netPay}입니다! 💸`,
+                        url: shareUrl
+                    });
+                } catch (err) {
+                    console.log('Share canceled');
+                }
+            } else {
+                // Fallback
+                prompt("이 링크를 복사해서 공유하세요!", shareUrl);
+            }
+        });
+    }
+
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', () => {
+            const shareUrl = generateShareUrl();
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert("링크가 복사되었습니다! 📋");
+            });
+        });
+    }
+
+    const showQrBtn = document.getElementById('showQrBtn');
+    if (showQrBtn) {
+        showQrBtn.addEventListener('click', () => {
+            const shareUrl = generateShareUrl();
+            const qrContainer = document.getElementById('qrCodeContainer');
+            qrContainer.innerHTML = ""; // Clear prev
+            new QRCode(qrContainer, {
+                text: shareUrl,
+                width: 180,
+                height: 180
+            });
+            document.getElementById('qrModal').style.display = 'flex';
+        });
+    }
+
+    // ... existing calculation logic ...
     calcBtn.addEventListener('click', () => {
+        // ... (Update history state)
         const inputValue = parseInputValue('salaryInput') * 10000; // Manwon -> Won
+
+        // Update URL State without reload
+        const shareUrl = generateShareUrl();
+        history.replaceState(null, '', shareUrl);
+
+        // ... rest of calculation ...
         const nonTaxable = parseInputValue('nonTaxable') * 10000;
         const dependents = parseInputValue('dependents');
         const children = parseInputValue('childrenUnder20');
